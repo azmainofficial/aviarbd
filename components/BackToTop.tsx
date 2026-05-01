@@ -15,34 +15,49 @@ export default function BackToTop() {
     <AnimatePresence>
       {visible && (
         <motion.button
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ duration: 0.25 }}
+          initial={{ opacity: 0, scale: 0.8, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.8, y: 20 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Back to top"
+          className="group"
           style={{
             position: "fixed",
-            bottom: "96px",
-            right: "26px",
+            bottom: "40px",
+            right: "40px",
             zIndex: 300,
-            width: "44px",
-            height: "44px",
-            background: "#0a0a0a",
-            color: "#fafaf8",
+            width: "56px",
+            height: "56px",
+            borderRadius: "50%",
+            background: "#c9a96e",
+            color: "#0a0a0a",
             border: "none",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "18px",
-            boxShadow: "0 4px 20px rgba(0,0,0,0.2)",
-            transition: "background 0.2s",
+            boxShadow: "0 8px 32px rgba(201, 169, 110, 0.3)",
+            overflow: "hidden",
+            outline: "none",
           }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#c9a96e"; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "#0a0a0a"; }}
         >
-          ↑
+          {/* Hover Fill Effect */}
+          <div 
+            className="absolute inset-0 bg-[#0a0a0a] rounded-full scale-0 group-hover:scale-100 transition-transform duration-500 ease-out origin-center"
+            style={{ zIndex: 0 }}
+          />
+          
+          {/* Arrow */}
+          <div className="relative z-10 flex flex-col items-center justify-center h-full w-full group-hover:text-[#c9a96e] transition-colors duration-300">
+             <svg 
+               width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+               className="group-hover:-translate-y-1 transition-transform duration-300 ease-out"
+             >
+              <path d="M12 19V5" />
+              <polyline points="5 12 12 5 19 12" />
+            </svg>
+          </div>
         </motion.button>
       )}
     </AnimatePresence>
