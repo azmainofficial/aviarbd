@@ -21,9 +21,10 @@ export type Product = {
 type ProductCardProps = {
   product: Product;
   onAddToCart: (product: Product) => void;
+  priority?: boolean;
 };
 
-const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product, onAddToCart, priority }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { toggleWishlist, isInWishlist } = useWishlist();
   const inWishlist = isInWishlist(product.id);
@@ -66,8 +67,8 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
           borderRadius: "24px",
           overflow: "hidden",
           cursor: "pointer",
-          boxShadow: isHovered 
-            ? "0 30px 60px rgba(0,0,0,0.15), 0 0 40px rgba(252, 182, 159, 0.4)" 
+          boxShadow: isHovered
+            ? "0 30px 60px rgba(0,0,0,0.15), 0 0 40px rgba(252, 182, 159, 0.4)"
             : "0 10px 30px rgba(0,0,0,0.05)",
           transform: isHovered ? "translateY(-10px) scale(1.02)" : "translateY(0) scale(1)",
           transition: "all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
@@ -160,7 +161,14 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
           transform: isHovered ? "scale(1.15) translateY(-5%)" : "scale(1) translateY(0)",
         }}>
           {product.image ? (
-            <Image src={product.image} alt={product.name} fill style={{ objectFit: "contain", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }} />
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              style={{ objectFit: "contain", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}
+              priority={priority}
+            />
           ) : (
             <div style={{ fontSize: "72px", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}>
               {product.icon}

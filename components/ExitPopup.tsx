@@ -61,6 +61,10 @@ export default function ExitPopup() {
     setIsVisible(false);
   };
 
+  // All hooks done — now safe to early-return on suppress paths
+  const SUPPRESS_ON = ["/admin", "/track", "/dashboard", "/order/", "/checkout", "/cart"];
+  if (SUPPRESS_ON.some((p) => pathname.startsWith(p))) return null;
+
   return (
     <>
       <AnimatePresence>

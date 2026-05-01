@@ -251,7 +251,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   // Close drawer when navigating
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
-  if (pathname === "/admin/login") return <>{children}</>;
+  if (pathname === "/admin/login") return <div data-admin="true" style={{ minHeight: "100vh" }}>{children}</div>;
 
   return (
     <div data-admin="true" style={{ minHeight: "100vh", background: "#f4f4f2", display: "flex" }}>

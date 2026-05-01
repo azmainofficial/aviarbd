@@ -67,7 +67,9 @@ export default function CustomCursor() {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       document.body.style.cursor = "auto";
     };
-  }, []);
+  }, [isAdmin]);
+
+  if (isTouch || isAdmin) return null;
 
   if (isTouch || isAdmin) return null;
 

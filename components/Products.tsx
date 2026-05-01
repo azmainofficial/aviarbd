@@ -300,19 +300,24 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols <= 2 ? 12 : 16 }}>
           {loading
             ? Array.from({ length: skeletonCount }).map((_, i) => (
-                <ProductSkeleton key={i} />
-              ))
+              <ProductSkeleton key={i} />
+            ))
             : filtered.length === 0
-            ? (
-              <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "80px 0", color: "#8a8680" }}>
-                <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
-                <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "24px", marginBottom: "8px" }}>No pieces found</div>
-                <p style={{ fontSize: "13px" }}>Try adjusting your filters</p>
-              </div>
-            )
-            : filtered.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-            ))}
+              ? (
+                <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "80px 0", color: "#8a8680" }}>
+                  <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
+                  <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "24px", marginBottom: "8px" }}>No pieces found</div>
+                  <p style={{ fontSize: "13px" }}>Try adjusting your filters</p>
+                </div>
+              )
+              : filtered.map((product, idx) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  priority={idx < 2}
+                />
+              ))}
         </div>
       </div>
 
