@@ -17,7 +17,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ filter?:
       <main>
         <Navbar />
         <div style={{ height: "72px", background: "#0a0a0a" }} />
-        <div style={{ background: "#f5f2ec", padding: "40px 48px 0" }}>
+        <div className="bg-cream px-4 md:px-12 pt-10">
           <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
             <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Shop" }]} />
             <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(32px,4vw,56px)", fontWeight: 300, color: "#0a0a0a", marginBottom: "8px" }}>

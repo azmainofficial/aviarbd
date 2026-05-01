@@ -21,9 +21,10 @@ export type Product = {
 type ProductCardProps = {
   product: Product;
   onAddToCart: (product: Product) => void;
+  priority?: boolean;
 };
 
-const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product, onAddToCart, priority }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { toggleWishlist, isInWishlist } = useWishlist();
   const inWishlist = isInWishlist(product.id);
@@ -62,12 +63,12 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
         style={{
           position: "relative",
           width: "100%",
-          aspectRatio: "3/4.5",
+          aspectRatio: "3/4",
           borderRadius: "24px",
           overflow: "hidden",
           cursor: "pointer",
-          boxShadow: isHovered 
-            ? "0 30px 60px rgba(0,0,0,0.15), 0 0 40px rgba(252, 182, 159, 0.4)" 
+          boxShadow: isHovered
+            ? "0 30px 60px rgba(0,0,0,0.15), 0 0 40px rgba(252, 182, 159, 0.4)"
             : "0 10px 30px rgba(0,0,0,0.05)",
           transform: isHovered ? "translateY(-10px) scale(1.02)" : "translateY(0) scale(1)",
           transition: "all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
@@ -160,9 +161,16 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
           transform: isHovered ? "scale(1.15) translateY(-5%)" : "scale(1) translateY(0)",
         }}>
           {product.image ? (
-            <Image src={product.image} alt={product.name} fill style={{ objectFit: "contain", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }} />
+            <Image
+              src={product.image}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              style={{ objectFit: "contain", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}
+              priority={priority}
+            />
           ) : (
-            <div style={{ fontSize: "100px", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}>
+            <div style={{ fontSize: "72px", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}>
               {product.icon}
             </div>
           )}
@@ -177,7 +185,7 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
           background: "rgba(255, 255, 255, 0.4)",
           backdropFilter: "blur(20px)",
           borderTop: "1px solid rgba(255, 255, 255, 0.6)",
-          padding: "24px",
+          padding: "16px 20px",
           display: "flex",
           flexDirection: "column",
           gap: "8px",
@@ -190,7 +198,7 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
               <div style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#5a5a5a", fontFamily: "DM Sans, sans-serif", marginBottom: "6px" }}>
                 {product.category}
               </div>
-              <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "22px", fontWeight: 600, color: "#1a1a1a", margin: 0, lineHeight: 1.1 }}>
+              <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "18px", fontWeight: 600, color: "#1a1a1a", margin: 0, lineHeight: 1.1 }}>
                 {product.name}
               </h3>
             </div>
@@ -206,37 +214,62 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart }: ProductC
             </div>
           </div>
 
-          {/* Add to Cart Button */}
-          <button
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product); }}
-            style={{
-              marginTop: "16px",
-              background: "linear-gradient(90deg, #0a0a0a 0%, #2a2a2a 100%)",
-              color: "white",
-              border: "none",
-              borderRadius: "12px",
-              padding: "16px",
-              fontSize: "12px",
-              fontWeight: 600,
-              letterSpacing: "0.15em",
-              textTransform: "uppercase",
-              cursor: "pointer",
-              fontFamily: "DM Sans, sans-serif",
-              boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-              transition: "transform 0.2s, box-shadow 0.2s",
-              opacity: isHovered ? 1 : 0,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "scale(1.03)";
-              e.currentTarget.style.boxShadow = "0 15px 25px rgba(0,0,0,0.3)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "scale(1)";
-              e.currentTarget.style.boxShadow = "0 10px 20px rgba(0,0,0,0.2)";
-            }}
-          >
-            Add to Bag
-          </button>
+          {/* Action Buttons */}
+          <div style={{ marginTop: "12px", display: "flex", gap: "8px", opacity: isHovered ? 1 : 0, transition: "opacity 0.3s" }}>
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product); }}
+              style={{
+                flex: 1,
+                background: "linear-gradient(90deg, #0a0a0a 0%, #2a2a2a 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: "12px",
+                padding: "13px 8px",
+                fontSize: "11px",
+                fontWeight: 600,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: "DM Sans, sans-serif",
+                boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
+                transition: "transform 0.2s, box-shadow 0.2s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+            >
+              Add to Bag
+            </button>
+            <Link
+              href={`/buy/${slug}`}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                flex: 1,
+                background: "linear-gradient(90deg, #c9a96e 0%, #b8924a 100%)",
+                color: "#0a0a0a",
+                border: "none",
+                borderRadius: "12px",
+                padding: "13px 8px",
+                fontSize: "11px",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                cursor: "pointer",
+                fontFamily: "DM Sans, sans-serif",
+                boxShadow: "0 8px 16px rgba(201,169,110,0.4)",
+                transition: "transform 0.2s",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 20,
+                position: "relative",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+            >
+              Buy Now
+            </Link>
+          </div>
         </div>
 
         {/* Invisible Link */}

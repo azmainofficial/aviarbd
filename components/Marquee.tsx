@@ -15,7 +15,7 @@ const phrases =[
 export default function Marquee() {
   return (
     <div
-      className="w-full overflow-hidden bg-[#0a0a0a] py-[20px]"
+      className="w-full overflow-hidden bg-[#0a0a0a] py-[14px] md:py-[20px]"
       style={{
         borderTop: "0.5px solid rgba(201,169,110,0.2)",
         borderBottom: "0.5px solid rgba(201,169,110,0.2)",

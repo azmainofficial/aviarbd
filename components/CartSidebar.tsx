@@ -55,7 +55,7 @@ export default function CartSidebar() {
             className="fixed top-0 right-0 h-full w-full max-w-[420px] bg-white z-[200] flex flex-col shadow-2xl"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-[32px] border-b-[0.5px] border-[rgba(0,0,0,0.08)] shrink-0">
+            <div className="flex items-center justify-between p-5 md:p-[32px] border-b-[0.5px] border-[rgba(0,0,0,0.08)] shrink-0">
               <h2 className="font-display text-[24px] text-black leading-none">
                 Your Cart
               </h2>
@@ -80,7 +80,7 @@ export default function CartSidebar() {
                   {cart.map((item) => (
                     <div
                       key={`${item.id}-${item.size}-${item.color}`}
-                      className="relative flex items-center gap-6 p-[24px_32px] border-b-[0.5px] border-[rgba(0,0,0,0.06)]"
+                      className="relative flex items-center gap-4 md:gap-6 p-5 md:p-[24px_32px] border-b-[0.5px] border-[rgba(0,0,0,0.06)]"
                     >
                       {/* Image Placeholder */}
                       <div className="w-[72px] h-[72px] shrink-0 bg-cream flex items-center justify-center text-[28px]">
@@ -125,7 +125,7 @@ export default function CartSidebar() {
                       {/* Remove Button */}
                       <button
                         onClick={() => removeItem(item.id, item.size, item.color)}
-                        className="absolute top-[24px] right-[32px] text-[12px] text-muted hover:text-black transition-colors"
+                        className="absolute top-5 right-5 md:top-[24px] md:right-[32px] text-[12px] text-muted hover:text-black transition-colors"
                         aria-label="Remove item"
                       >
                         ✕
@@ -134,7 +134,7 @@ export default function CartSidebar() {
                   ))}
 
                   {/* Upsell Box */}
-                  <div className="bg-cream p-[20px_32px] m-[32px_32px_0_32px] border-[0.5px] border-[rgba(201,169,110,0.2)]">
+                  <div className="bg-cream p-4 md:p-[20px_32px] m-5 md:m-[32px_32px_0_32px] border-[0.5px] border-[rgba(201,169,110,0.2)]">
                     <div className="text-[10px] uppercase tracking-[0.15em] text-gold mb-3">
                       You might also like
                     </div>
@@ -160,7 +160,7 @@ export default function CartSidebar() {
             </div>
 
             {/* Footer */}
-            <div className="p-[32px] border-t-[0.5px] border-[rgba(0,0,0,0.08)] shrink-0 bg-white">
+            <div className="p-5 md:p-[32px] border-t-[0.5px] border-[rgba(0,0,0,0.08)] shrink-0 bg-white">
               <div className="flex items-end justify-between mb-6">
                 <span className="text-[14px] text-muted">Subtotal</span>
                 <span className="font-display text-[24px] text-black leading-none">

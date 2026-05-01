@@ -1,16 +1,28 @@
 // components/CustomCursor.tsx
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 
 export default function CustomCursor() {
+  const pathname = usePathname();
   const dotRef = useRef<HTMLDivElement>(null);
   const ringRef = useRef<HTMLDivElement>(null);
   const mouse = useRef({ x: -100, y: -100 });
   const ring = useRef({ x: -100, y: -100 });
   const requestRef = useRef<number | undefined>(undefined);
   const [isHovering, setIsHovering] = useState(false);
+  const [isTouch, setIsTouch] = useState(false);
+
+  const isAdmin = pathname?.startsWith("/admin") ?? false;
 
   useEffect(() => {
+    // Skip on admin pages — they use the native cursor
+    if (isAdmin) return;
+    // Skip the entire cursor system on touch / coarse-pointer devices
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches) {
+      setIsTouch(true);
+      return;
+    }
     document.body.style.cursor = "none";
 
     const onMouseMove = (e: MouseEvent) => {
@@ -55,7 +67,9 @@ export default function CustomCursor() {
       if (requestRef.current) cancelAnimationFrame(requestRef.current);
       document.body.style.cursor = "auto";
     };
-  }, []);
+  }, [isAdmin]);
+
+  if (isTouch || isAdmin) return null;
 
   return (
     <>
@@ -68,7 +82,7 @@ export default function CustomCursor() {
           background: isHovering ? "#0a0a0a" : "#c9a96e",
           borderRadius: "50%",
           pointerEvents: "none",
-          zIndex: 9999,
+          zIndex: 99999,
           transform: "translate(-50%, -50%)",
           transition: "width 0.2s, height 0.2s, background 0.2s",
         }}
@@ -82,7 +96,7 @@ export default function CustomCursor() {
           border: "1px solid #c9a96e",
           borderRadius: "50%",
           pointerEvents: "none",
-          zIndex: 9998,
+          zIndex: 99998,
           transform: "translate(-50%, -50%)",
           opacity: 0.6,
         }}

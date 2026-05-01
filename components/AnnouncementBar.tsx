@@ -26,25 +26,26 @@ export default function AnnouncementBar() {
         background: "#0a0a0a",
         color: "#fafaf8",
         textAlign: "center",
-        padding: "10px 48px",
-        fontSize: "11px",
+        padding: "10px 40px 10px 16px",
+        fontSize: "clamp(10px, 2.6vw, 11px)",
         letterSpacing: "0.12em",
         textTransform: "uppercase",
         position: "relative",
         zIndex: 200,
+        lineHeight: 1.5,
       }}
     >
       <span style={{ color: "#c9a96e" }}>✦</span>
-      {"  "}Free shipping on all orders over $150 — Use code{" "}
+      {"  "}Free shipping over $150 — Use{" "}
       <span style={{ color: "#c9a96e", fontWeight: 600 }}>AVIAR10</span>
-      {" "}for 10% off your first order{"  "}
+      {" "}for 10% off{"  "}
       <span style={{ color: "#c9a96e" }}>✦</span>
       <button
         onClick={handleClose}
         aria-label="Dismiss"
         style={{
           position: "absolute",
-          right: "20px",
+          right: "12px",
           top: "50%",
           transform: "translateY(-50%)",
           background: "none",
@@ -53,6 +54,7 @@ export default function AnnouncementBar() {
           cursor: "pointer",
           fontSize: "14px",
           lineHeight: 1,
+          padding: "4px 8px",
         }}
       >
         ✕

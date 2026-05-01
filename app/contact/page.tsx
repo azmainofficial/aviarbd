@@ -1,5 +1,5 @@
 "use client";
-import { useState, type SyntheticEvent, type CSSProperties } from "react";
+import { useState, useEffect, type SyntheticEvent, type CSSProperties } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
@@ -7,6 +7,14 @@ import PageTransition from "@/components/PageTransition";
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const handleSubmit = (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -32,7 +40,7 @@ export default function ContactPage() {
         <Navbar />
         <div style={{ height: "72px", background: "#0a0a0a" }} />
 
-        <section style={{ background: "#0a0a0a", padding: "80px 48px", textAlign: "center" }}>
+        <section style={{ background: "#0a0a0a", padding: isDesktop ? "80px 48px" : "56px 20px", textAlign: "center" }}>
           <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "16px" }}>
             Get In Touch
           </div>
@@ -41,8 +49,8 @@ export default function ContactPage() {
           </h1>
         </section>
 
-        <section style={{ background: "#fafaf8", padding: "120px 48px" }}>
-          <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "80px", alignItems: "start" }}>
+        <section style={{ background: "#fafaf8", padding: isDesktop ? "120px 48px" : "60px 20px" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: isDesktop ? "80px" : "40px", alignItems: "start" }}>
             <div>
               <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "24px" }}>
                 Contact Information
@@ -75,7 +83,7 @@ export default function ContactPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} style={{ width: "100%" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: "16px" }}>
                     <input placeholder="Your Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required style={inputStyle} />
                     <input type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required style={inputStyle} />
                   </div>

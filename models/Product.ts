@@ -1,6 +1,6 @@
 // models/Product.ts
 import mongoose, { Schema, Document, Model } from "mongoose";
-import type { ProductBadge } from "@/lib/types";
+import type { ProductBadge, ProductSection } from "@/lib/types";
 
 export interface IProduct extends Document {
   name: string;
@@ -8,13 +8,16 @@ export interface IProduct extends Document {
   price: number;
   originalPrice?: number;
   category: string;
+  section?: ProductSection;
   badge?: ProductBadge;
   description?: string;
   sizes: string[];
   colors: string[];
   image?: string;
+  images: string[];
   icon?: string;
   inStock: boolean;
+  stockCount: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,13 +29,16 @@ const ProductSchema = new Schema<IProduct>(
     price: { type: Number, required: true },
     originalPrice: { type: Number },
     category: { type: String, required: true },
-    badge: { type: String },
+    section: { type: String, enum: ["collection", "new_arrival", "sale"] },
+    badge: { type: String, enum: ["new", "sale"] },
     description: { type: String },
     sizes: [{ type: String }],
     colors: [{ type: String }],
     image: { type: String },
+    images: [{ type: String }],
     icon: { type: String },
     inStock: { type: Boolean, default: true },
+    stockCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
@@ -10,6 +11,17 @@ import Breadcrumb from "@/components/Breadcrumb";
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist } = useWishlist();
   const { addToCart, openCart } = useCart();
+  const [cols, setCols] = useState(4);
+
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      setCols(w < 640 ? 2 : w < 1024 ? 3 : 4);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const handleAddToCart = (item: typeof wishlist[0]) => {
     addToCart({
@@ -32,7 +44,7 @@ export default function WishlistPage() {
         <Navbar />
         <div style={{ height: "72px", background: "#0a0a0a" }} />
 
-        <section style={{ background: "#fafaf8", minHeight: "80vh", padding: "80px 48px" }}>
+        <section style={{ background: "#fafaf8", minHeight: "80vh", padding: cols >= 4 ? "80px 48px" : "48px 20px" }}>
           <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
             <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Wishlist" }]} />
 
@@ -53,7 +65,7 @@ export default function WishlistPage() {
                 </Link>
               </div>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols <= 2 ? "12px" : "16px" }}>
                 {wishlist.map((item) => (
                   <div key={item.id} style={{ background: "white", position: "relative" }}>
                     <button

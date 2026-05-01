@@ -38,14 +38,14 @@ export default function Reviews() {
   };
 
   return (
-    <section className="px-[48px] py-[120px] w-full" style={{ background: "var(--white)" }}>
+    <section className="px-5 md:px-[48px] py-[60px] md:py-[120px] w-full" style={{ background: "var(--white)" }}>
       <div className="max-w-[1440px] mx-auto flex flex-col items-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="text-center mb-16"
+          className="text-center mb-10 md:mb-16"
         >
           <div className="text-[10px] tracking-[0.25em] uppercase mb-4" style={{ color: "var(--muted)" }}>What they say</div>
           <div className="text-[16px] tracking-[0.2em] mb-4" style={{ color: "var(--gold)" }}>★★★★★</div>
@@ -67,10 +67,10 @@ export default function Reviews() {
               variants={itemVariants}
               animate={{ scale: index === activeIndex ? 1 : 0.96, opacity: index === activeIndex ? 1 : 0.4 }}
               transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="p-[40px] flex flex-col justify-between"
-              style={{ border: "0.5px solid rgba(0,0,0,0.06)", minHeight: "320px", background: "white" }}
+              className="p-[28px] md:p-[40px] flex flex-col justify-between"
+              style={{ border: "0.5px solid rgba(0,0,0,0.06)", minHeight: "260px", background: "white" }}
             >
-              <p className="font-display italic text-[20px] leading-[1.7] mb-8" style={{ color: "var(--dark-muted)" }}>
+              <p className="font-display italic text-[17px] md:text-[20px] leading-[1.7] mb-6 md:mb-8" style={{ color: "var(--dark-muted)" }}>
                 &quot;{review.text}&quot;
               </p>
               <div className="flex items-center gap-4 mt-auto">

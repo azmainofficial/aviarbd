@@ -3,7 +3,9 @@
 // ─── Cart / Order ────────────────────────────────────────────────────────────
 
 export interface OrderCustomer {
-  name: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   address: string;
   city: string;
@@ -37,17 +39,22 @@ export interface CreateOrderBody {
 // ─── Product ─────────────────────────────────────────────────────────────────
 
 export type ProductBadge = "new" | "sale";
+export type ProductSection = "collection" | "new_arrival" | "sale";
 
 export interface CreateProductBody {
   name: string;
   price: number;
   originalPrice?: number | null;
   category: string;
+  section?: ProductSection | null;
   badge?: ProductBadge | null;
   description: string;
   sizes: string[];
   colors: string[];
   image?: string;
+  images?: string[];
+  stockCount?: number;
+  inStock?: boolean;
 }
 
 // ─── API request bodies ───────────────────────────────────────────────────────

@@ -20,20 +20,76 @@
   padding: 0;
 }
 
-html { scroll-behavior: smooth; }
+/* Restore normal cursor on touch / coarse-pointer devices (phones, tablets) */
+@media (hover: none) or (pointer: coarse) {
+  * {
+    cursor: auto !important;
+  }
+
+  a,
+  button,
+  [role="button"] {
+    cursor: pointer !important;
+  }
+
+  input,
+  textarea {
+    cursor: text !important;
+  }
+}
+
+/* Normal cursor for all admin pages */
+[data-admin],
+[data-admin] * {
+  cursor: auto !important;
+}
+
+[data-admin] a,
+[data-admin] button,
+[data-admin] select,
+[data-admin] input,
+[data-admin] textarea,
+[data-admin] label[for],
+[data-admin] [role="button"] {
+  cursor: pointer !important;
+}
+
+[data-admin] input,
+[data-admin] textarea {
+  cursor: text !important;
+}
+
+html {
+  scroll-behavior: smooth;
+  position: relative !important;
+}
 
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--white);
   color: var(--black);
   overflow-x: hidden;
+  position: relative !important;
 }
 
-.font-display { font-family: 'Cormorant Garamond', serif; }
+main,
+section,
+footer {
+  position: relative;
+}
+
+.font-display {
+  font-family: 'Cormorant Garamond', serif;
+}
 
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {

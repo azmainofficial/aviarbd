@@ -1,9 +1,45 @@
 // app/product/[slug]/page.tsx
+import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductDetail from "@/components/ProductDetail";
+import { connectDB } from "@/lib/mongodb";
+import Product from "@/models/Product";
 
-export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+interface Props {
+  params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    await connectDB();
+    const product = await Product.findOne({ slug }).lean();
+    if (product) {
+      const images = Array.isArray(product.images) ? product.images : [];
+      return {
+        title: `${product.name} — AVIAR Premium Collection`,
+        description: product.description
+          ? String(product.description).slice(0, 160)
+          : `Shop ${product.name} at AVIAR. Premium luxury fashion.`,
+        openGraph: {
+          title: product.name,
+          description: product.description ? String(product.description).slice(0, 160) : "",
+          images: images.length > 0 ? [{ url: images[0] as string }] : [],
+          type: "website",
+        },
+      };
+    }
+  } catch {
+    // Fallback to generic metadata on DB error
+  }
+  return {
+    title: "Product — AVIAR Premium Collection",
+    description: "Shop our curated luxury fashion collection.",
+  };
+}
+
+export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   return (
     <main>

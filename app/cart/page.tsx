@@ -1,4 +1,5 @@
 "use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,15 +10,24 @@ import { useCart } from "@/context/CartContext";
 export default function CartPage() {
   const { cart, removeItem, changeQty, cartTotal, cartCount } = useCart();
   const router = useRouter();
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 1024);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   return (
     <main>
       <Navbar />
-      <div style={{ paddingTop: "72px", minHeight: "100vh", background: "#fafaf8" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "80px 48px" }}>
+      <div style={{ height: "72px", background: "#0a0a0a" }} />
+      <div style={{ minHeight: "100vh", background: "#fafaf8" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isDesktop ? "80px 48px" : "40px 20px" }}>
 
           {/* Header */}
-          <div style={{ marginBottom: "48px" }}>
+          <div style={{ marginBottom: isDesktop ? "48px" : "28px" }}>
             <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "12px" }}>
               Your Selection
             </div>
@@ -50,7 +60,7 @@ export default function CartPage() {
               </Link>
             </motion.div>
           ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "64px", alignItems: "start" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 380px" : "1fr", gap: isDesktop ? "64px" : "40px", alignItems: "start" }}>
 
               {/* Cart Items */}
               <div>
@@ -60,10 +70,10 @@ export default function CartPage() {
                     initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    style={{ display: "flex", gap: "24px", padding: "32px 0", borderBottom: "0.5px solid rgba(0,0,0,0.08)" }}
+                    style={{ display: "flex", gap: isDesktop ? "24px" : "14px", padding: isDesktop ? "32px 0" : "20px 0", borderBottom: "0.5px solid rgba(0,0,0,0.08)" }}
                   >
                     {/* Image */}
-                    <div style={{ width: "120px", height: "150px", background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "48px" }}>
+                    <div style={{ width: isDesktop ? "120px" : "84px", height: isDesktop ? "150px" : "108px", background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isDesktop ? "48px" : "32px" }}>
                       {item.image}
                     </div>
 
@@ -73,7 +83,7 @@ export default function CartPage() {
                         <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "6px" }}>
                           {item.category}
                         </div>
-                        <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "22px", fontWeight: 400, color: "#0a0a0a", marginBottom: "8px" }}>
+                        <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "22px" : "18px", fontWeight: 400, color: "#0a0a0a", marginBottom: "8px", lineHeight: 1.2 }}>
                           {item.name}
                         </h3>
                         <div style={{ fontSize: "12px", color: "#8a8680", marginBottom: "16px" }}>
@@ -109,7 +119,7 @@ export default function CartPage() {
 
                     {/* Price */}
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "22px", color: "#0a0a0a" }}>
+                      <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "22px" : "17px", color: "#0a0a0a", whiteSpace: "nowrap" }}>
                         ${(item.price * item.qty).toFixed(2)}
                       </div>
                       {item.qty > 1 && (
@@ -136,7 +146,7 @@ export default function CartPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                style={{ background: "#f5f2ec", padding: "40px", position: "sticky", top: "96px" }}
+                style={{ background: "#f5f2ec", padding: isDesktop ? "40px" : "28px", position: isDesktop ? "sticky" : "static", top: "96px" }}
               >
                 <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "24px" }}>
                   Order Summary

@@ -34,7 +34,15 @@ type Props = {
 export default function SearchModal({ isOpen, onClose }: Props) {
   const [query, setQuery] = useState("");
   const [allProducts, setAllProducts] = useState<SearchProduct[]>(FALLBACK_PRODUCTS);
+  const [isDesktop, setIsDesktop] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Load products from API once on mount
   useEffect(() => {
@@ -96,7 +104,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
-            style={{ position: "fixed", top: 0, left: 0, right: 0, background: "#fafaf8", zIndex: 201, padding: "32px 48px 40px" }}
+            style={{ position: "fixed", top: 0, left: 0, right: 0, background: "#fafaf8", zIndex: 201, padding: isDesktop ? "32px 48px 40px" : "20px 20px 28px", maxHeight: "100vh", overflowY: "auto" }}
           >
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "24px" }}>
@@ -114,7 +122,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search for products..."
-                style={{ flex: 1, border: "none", background: "none", fontSize: "24px", fontFamily: "Cormorant Garamond, serif", fontWeight: 300, color: "#0a0a0a", outline: "none" }}
+                style={{ flex: 1, border: "none", background: "none", fontSize: isDesktop ? "24px" : "18px", fontFamily: "Cormorant Garamond, serif", fontWeight: 300, color: "#0a0a0a", outline: "none", minWidth: 0 }}
               />
               {query && (
                 <button onClick={() => setQuery("")} style={{ background: "none", border: "none", cursor: "pointer", color: "#8a8680", fontSize: "16px" }}>✕</button>
@@ -140,7 +148,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
                     <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "#8a8680", marginBottom: "16px" }}>
                       {results.length} result{results.length !== 1 ? "s" : ""}
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+                    <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "1fr", gap: "12px" }}>
                       {results.map((product) => (
                         <Link key={product.id} href={`/product/${product.slug}`} onClick={onClose} style={{ textDecoration: "none" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", border: "0.5px solid rgba(0,0,0,0.08)", transition: "border-color 0.2s" }}

@@ -8,10 +8,10 @@ export async function GET(): Promise<NextResponse> {
   try {
     await connectDB();
     const products = await Product.find({}).sort({ createdAt: -1 });
-    return NextResponse.json({ products });
+    return NextResponse.json(products);
   } catch (error) {
     console.error("Failed to fetch products:", error);
-    return NextResponse.json({ products: [] }, { status: 200 });
+    return NextResponse.json([], { status: 200 });
   }
 }
 
@@ -28,6 +28,9 @@ export async function POST(request: Request): Promise<NextResponse> {
       slug,
       originalPrice: body.originalPrice ?? undefined,
       badge: body.badge ?? undefined,
+      section: body.section ?? undefined,
+      images: body.images ?? [],
+      stockCount: body.stockCount ?? 0,
     });
     return NextResponse.json({ product }, { status: 201 });
   } catch {

@@ -1,8 +1,18 @@
 // components/BrandStory.tsx
 "use client";
+import { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
 
 export default function BrandStory() {
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 768);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -14,8 +24,8 @@ export default function BrandStory() {
   };
 
   return (
-    <section style={{ background: "#0a0a0a", padding: "64px 48px", width: "100%", overflow: "hidden" }}>
-      <div style={{ maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "64px", alignItems: "center" }}>
+    <section style={{ background: "#0a0a0a", padding: isDesktop ? "64px 48px" : "48px 20px", width: "100%", overflow: "hidden" }}>
+      <div style={{ maxWidth: "1440px", margin: "0 auto", display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: isDesktop ? "64px" : "40px", alignItems: "center" }}>
 
         {/* Left Visual */}
         <motion.div

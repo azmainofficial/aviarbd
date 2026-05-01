@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ChangeEvent, type SyntheticEvent } from "react";
+import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
+import { useAbandonedSave } from "@/lib/useAbandonedSave";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
 
@@ -45,6 +46,15 @@ function CheckoutForm() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isDesktop, setIsDesktop] = useState(true);
+  const { save: saveAbandoned } = useAbandonedSave();
+
+  useEffect(() => {
+    const update = () => setIsDesktop(window.innerWidth >= 1024);
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Coupon
   const [couponInput, setCouponInput] = useState("");
@@ -67,7 +77,20 @@ function CheckoutForm() {
   const total = Math.max(0, cartTotal - (appliedCoupon && COUPONS[appliedCoupon]?.type !== "shipping" ? discount : 0) + effectiveShipping);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const updated = { ...form, [e.target.name]: e.target.value };
+    setForm(updated);
+    // Save abandoned checkout whenever email is valid
+    saveAbandoned({
+      email: updated.email,
+      name: `${updated.firstName} ${updated.lastName}`.trim(),
+      address: updated.address,
+      city: updated.city,
+      country: updated.country,
+      zip: updated.zip,
+      items: cart.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.size, color: i.color, image: i.image, category: i.category })),
+      total,
+      source: "checkout",
+    });
   };
 
   const handleApplyCoupon = () => {
@@ -89,19 +112,21 @@ function CheckoutForm() {
 
     try {
       if (paymentMethod === "cod") {
-        await fetch("/api/orders", {
+        const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            customer: { name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
+            customer: { firstName: form.firstName, lastName: form.lastName, name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
             items: cart,
             total,
             paymentMethod: "Cash on Delivery",
             status: "pending",
           }),
         });
+        const data = await res.json() as { orderNumber?: string; message?: string };
+        if (!res.ok) { setError(data.message ?? "Failed to place order. Please try again."); setLoading(false); return; }
         clearCart();
-        router.push("/order/confirmation");
+        router.push(`/order/confirmation?order=${encodeURIComponent(data.orderNumber ?? "")}`);
         return;
       }
 
@@ -132,11 +157,11 @@ function CheckoutForm() {
       }
 
       if (paymentIntent?.status === "succeeded") {
-        await fetch("/api/orders", {
+        const orderRes = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            customer: { name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
+            customer: { firstName: form.firstName, lastName: form.lastName, name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
             items: cart,
             total,
             paymentMethod: "Card",
@@ -144,8 +169,9 @@ function CheckoutForm() {
             status: "paid",
           }),
         });
+        const orderData = await orderRes.json() as { orderNumber?: string };
         clearCart();
-        router.push("/order/confirmation");
+        router.push(`/order/confirmation?order=${encodeURIComponent(orderData.orderNumber ?? "")}`);
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -165,20 +191,20 @@ function CheckoutForm() {
   };
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "80px 48px", display: "grid", gridTemplateColumns: "1fr 380px", gap: "80px", alignItems: "start" }}>
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isDesktop ? "48px 48px 80px" : "32px 20px 60px", display: "grid", gridTemplateColumns: isDesktop ? "1fr 380px" : "1fr", gap: isDesktop ? "64px" : "40px", alignItems: "start" }}>
 
       {/* Left: Form */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "12px" }}>Secure Checkout</div>
-        <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(32px,4vw,48px)", fontWeight: 300, marginBottom: "48px" }}>
+        <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(28px,4vw,48px)", fontWeight: 300, marginBottom: isDesktop ? "48px" : "28px" }}>
           Complete Your <em>Order</em>
         </h1>
 
         <form onSubmit={handleSubmit}>
           {/* Contact */}
-          <div style={{ marginBottom: "40px" }}>
+          <div style={{ marginBottom: isDesktop ? "40px" : "28px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Contact Information</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: "12px", marginBottom: "12px" }}>
               <input name="firstName" placeholder="First Name" value={form.firstName} onChange={handleChange} required style={inputStyle} />
               <input name="lastName" placeholder="Last Name" value={form.lastName} onChange={handleChange} required style={inputStyle} />
             </div>
@@ -186,20 +212,20 @@ function CheckoutForm() {
           </div>
 
           {/* Shipping */}
-          <div style={{ marginBottom: "40px" }}>
+          <div style={{ marginBottom: isDesktop ? "40px" : "28px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Shipping Address</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               <input name="address" placeholder="Street Address" value={form.address} onChange={handleChange} required style={inputStyle} />
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr 1fr" : "1fr 1fr", gap: "12px" }}>
                 <input name="city" placeholder="City" value={form.city} onChange={handleChange} required style={inputStyle} />
                 <input name="country" placeholder="Country" value={form.country} onChange={handleChange} required style={inputStyle} />
-                <input name="zip" placeholder="ZIP Code" value={form.zip} onChange={handleChange} required style={inputStyle} />
+                <input name="zip" placeholder="ZIP Code" value={form.zip} onChange={handleChange} required style={{ ...inputStyle, gridColumn: isDesktop ? "auto" : "1 / -1" }} />
               </div>
             </div>
           </div>
 
           {/* Payment Method */}
-          <div style={{ marginBottom: "40px" }}>
+          <div style={{ marginBottom: isDesktop ? "40px" : "28px" }}>
             <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Payment Method</div>
 
             <div style={{ display: "flex", gap: "0", marginBottom: "24px", border: "0.5px solid rgba(0,0,0,0.15)" }}>
@@ -307,7 +333,7 @@ function CheckoutForm() {
                     <p style={{ fontSize: "11px", color: "#c0392b", marginTop: "6px" }}>{couponError}</p>
                   )}
                   <p style={{ fontSize: "10px", color: "#8a8680", marginTop: "6px", letterSpacing: "0.04em" }}>
-                    Try: AVIAR10 · SAVE20 · FREESHIP
+                    Have a coupon code? Enter it above.
                   </p>
                 </div>
               )}
@@ -350,7 +376,8 @@ export default function CheckoutPage() {
   return (
     <main>
       <Navbar />
-      <div style={{ paddingTop: "72px", minHeight: "100vh", background: "#fafaf8" }}>
+      <div style={{ height: "72px", background: "#0a0a0a" }} />
+      <div style={{ minHeight: "100vh", background: "#fafaf8" }}>
         <Elements stripe={stripePromise}>
           <CheckoutForm />
         </Elements>

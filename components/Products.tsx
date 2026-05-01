@@ -49,6 +49,18 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
   const [sort, setSort] = useState(initialFilter === "new" ? "newest" : "featured");
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [showSaleOnly, setShowSaleOnly] = useState(initialFilter === "sale");
+  const [cols, setCols] = useState(4);
+
+  // JS-based responsive columns (works reliably with Turbopack)
+  useEffect(() => {
+    const update = () => {
+      const w = window.innerWidth;
+      setCols(w < 640 ? 2 : w < 1024 ? 3 : w < 1280 ? 4 : 4);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   useEffect(() => {
     // Reset defaults first
@@ -79,17 +91,20 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
       .then((data: unknown) => {
         if (cancelled) return;
         if (Array.isArray(data) && data.length > 0) {
-          const mapped = (data as Record<string, unknown>[]).map((p) => ({
-            id: String(p._id ?? p.id ?? ""),
-            name: String(p.name ?? ""),
-            price: Number(p.price ?? 0),
-            originalPrice: p.originalPrice != null ? Number(p.originalPrice) : undefined,
-            image: p.image ? String(p.image) : undefined,
-            icon: p.icon ? String(p.icon) : "🛍️",
-            category: String(p.category ?? ""),
-            badge: (p.badge as Product["badge"]) ?? undefined,
-            slug: String(p.slug ?? p.name),
-          }));
+          const mapped = (data as Record<string, unknown>[]).map((p) => {
+            const images = Array.isArray(p.images) ? (p.images as string[]) : [];
+            return {
+              id: String(p._id ?? p.id ?? ""),
+              name: String(p.name ?? ""),
+              price: Number(p.price ?? 0),
+              originalPrice: p.originalPrice != null ? Number(p.originalPrice) : undefined,
+              image: images[0] ?? (p.image ? String(p.image) : undefined),
+              icon: p.icon ? String(p.icon) : "🛍️",
+              category: String(p.category ?? ""),
+              badge: (p.badge as Product["badge"]) ?? undefined,
+              slug: String(p.slug ?? p.name),
+            };
+          });
           setProducts(mapped);
         } else {
           setProducts(SAMPLE_PRODUCTS);
@@ -148,16 +163,16 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
     <section
       style={{
         background: "#f5f2ec",
-        padding: shopMode ? "60px 48px" : "80px 48px",
         position: "relative",
         width: "100%",
       }}
+      className={shopMode ? "py-[40px] md:py-[60px] px-5 md:px-12" : "py-[44px] md:py-[80px] px-5 md:px-12"}
     >
       <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
 
         {/* Header */}
         {!shopMode && (
-          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <div style={{ textAlign: "center", marginBottom: cols <= 2 ? "28px" : "48px" }}>
             <div style={{ color: "#c9a96e", fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: "12px" }}>
               The Collection
             </div>
@@ -171,7 +186,8 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: cols <= 2 ? "stretch" : "center",
+            flexDirection: cols <= 2 ? "column" : "row",
             justifyContent: "space-between",
             marginBottom: "32px",
             flexWrap: "wrap",
@@ -181,7 +197,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
           }}
         >
           {/* Category Tabs */}
-          <div style={{ display: "flex", gap: "0" }}>
+          <div style={{ display: "flex", gap: "0", ...(cols <= 2 ? { overflowX: "auto", scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } : {}) }}>
             {TABS.map((tab) => (
               <button
                 key={tab}
@@ -207,7 +223,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
           </div>
 
           {/* Sort + Filters */}
-          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
             {/* Sale toggle */}
             <button
               onClick={() => setShowSaleOnly(!showSaleOnly)}
@@ -254,20 +270,22 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
               ))}
             </select>
 
-            {/* Price range */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#8a8680", letterSpacing: "0.06em" }}>
-              <span>$0</span>
-              <input
-                type="range"
-                min={0}
-                max={1000}
-                step={50}
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([0, Number(e.target.value)])}
-                style={{ width: "80px", accentColor: "#c9a96e" }}
-              />
-              <span>${priceRange[1]}</span>
-            </div>
+            {/* Price range — hide on smallest screens */}
+            {cols > 2 && (
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#8a8680", letterSpacing: "0.06em" }}>
+                <span>$0</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1000}
+                  step={50}
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([0, Number(e.target.value)])}
+                  style={{ width: "80px", accentColor: "#c9a96e" }}
+                />
+                <span>${priceRange[1]}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -279,22 +297,27 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
         )}
 
         {/* Product Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols <= 2 ? 12 : 16 }}>
           {loading
             ? Array.from({ length: skeletonCount }).map((_, i) => (
-                <ProductSkeleton key={i} />
-              ))
+              <ProductSkeleton key={i} />
+            ))
             : filtered.length === 0
-            ? (
-              <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "80px 0", color: "#8a8680" }}>
-                <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
-                <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "24px", marginBottom: "8px" }}>No pieces found</div>
-                <p style={{ fontSize: "13px" }}>Try adjusting your filters</p>
-              </div>
-            )
-            : filtered.map((product) => (
-              <ProductCard key={product.id} product={product} onAddToCart={handleAddToCart} />
-            ))}
+              ? (
+                <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "80px 0", color: "#8a8680" }}>
+                  <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
+                  <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "24px", marginBottom: "8px" }}>No pieces found</div>
+                  <p style={{ fontSize: "13px" }}>Try adjusting your filters</p>
+                </div>
+              )
+              : filtered.map((product, idx) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  priority={idx < 2}
+                />
+              ))}
         </div>
       </div>
 

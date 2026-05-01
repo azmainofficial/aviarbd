@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const crypto = require\\('crypto'\\); console.log\\(crypto.randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js\\)$\")",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('fs'\\).readFileSync\\('.env.local','utf8'\\).split\\('\\\\n'\\).find\\(l=>l.startsWith\\('MONGODB_URI'\\)\\).split\\('='\\).slice\\(1\\).join\\('='\\)\")",
+      "Bash(ipconfig getifaddr *)"
+    ],
+    "additionalDirectories": [
+      "/Users/samio/aviarx/app/api/products",
+      "/Users/samio/aviarx/app/buy",
+      "/Users/samio/aviarx/app/api/admin/abandoned"
+    ]
+  }
+}
