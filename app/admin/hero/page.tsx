@@ -33,11 +33,11 @@ export default function AdminHeroSlides() {
 
   const fetchSlides = async () => {
     try {
-      const res = await fetch("/backend/admin/hero-slides");
+      const res = await fetch("/api/admin/hero-slides");
       if (res.ok) {
         setSlides(await res.json());
       }
-      const prodRes = await fetch("/backend/admin/products");
+      const prodRes = await fetch("/api/admin/products");
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(Array.isArray(prodData) ? prodData : (prodData.data ?? []));
@@ -74,7 +74,7 @@ export default function AdminHeroSlides() {
     const formData = new FormData();
     formData.append("image", e.target.files[0]);
     try {
-      const res = await fetch("/backend/upload", { method: "POST", body: formData });
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
       if (res.ok) {
         const data = await res.json();
         setForm({ ...form, image: data.url });
@@ -92,7 +92,7 @@ export default function AdminHeroSlides() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/backend/admin/hero-slides", {
+      const res = await fetch("/api/admin/hero-slides", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -109,12 +109,12 @@ export default function AdminHeroSlides() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this slide?")) return;
-    await fetch(`/backend/admin/hero-slides/${id}`, { method: "DELETE" });
+    await fetch(`/api/admin/hero-slides/${id}`, { method: "DELETE" });
     fetchSlides();
   };
 
   const toggleActive = async (slide: HeroSlide) => {
-    await fetch(`/backend/admin/hero-slides/${slide.id}`, {
+    await fetch(`/api/admin/hero-slides/${slide.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !slide.is_active })

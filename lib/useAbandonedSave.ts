@@ -46,7 +46,7 @@ export function useAbandonedSave() {
     // Debounce — wait 1.5 s after last keystroke before saving
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      fetch("/backend/abandoned", {
+      fetch("/api/abandoned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

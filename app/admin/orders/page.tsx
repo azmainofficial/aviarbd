@@ -71,7 +71,7 @@ export default function AdminOrdersPage() {
   const showToast = (message: string, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast(t => ({ ...t, show: false })), 3000); };
 
   useEffect(() => {
-    fetch("/backend/admin/orders")
+    fetch("/api/admin/orders")
       .then(r => r.json())
       .then((d: any) => setOrders(Array.isArray(d) ? d.map(mapApiOrder) : []))
       .catch(console.error)
@@ -81,7 +81,7 @@ export default function AdminOrdersPage() {
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`/backend/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
+      const res = await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
       if (res.ok) {
         setOrders(p => p.map(o => (o._id === orderId || String(o.id) === orderId) ? { ...o, status: newStatus } : o));
         if ((selected?._id === orderId || String(selected?.id) === orderId)) setSelected(p => p ? { ...p, status: newStatus } : null);

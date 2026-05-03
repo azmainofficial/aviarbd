@@ -34,7 +34,7 @@ export default function EditProductPage() {
   const showToast = (message: string, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast(t => ({ ...t, show: false })), 3500); };
 
   useEffect(() => {
-    fetch(`/backend/admin/products/${id}`)
+    fetch(`/api/admin/products/${id}`)
       .then(r => r.json())
       .then((p: Record<string, unknown>) => {
         setForm({ name: String(p.name ?? ""), description: String(p.description ?? ""), price: String(p.price ?? ""), originalPrice: p.originalPrice ? String(p.originalPrice) : "", stockCount: String(p.stockCount ?? 0), inStock: Boolean(p.inStock ?? true), category: String(p.category ?? "Clothing"), sizes: Array.isArray(p.sizes) ? p.sizes as string[] : [], colors: Array.isArray(p.colors) ? p.colors as string[] : [], colorInput: "", section: (p.section as ProductSection) ?? "" });
@@ -50,7 +50,7 @@ export default function EditProductPage() {
     const fd = new FormData();
     fd.append("image", file);
 
-    const res = await fetch("/backend/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
 
     const text = await res.text();
     let json: Record<string, unknown> = {};
@@ -95,7 +95,7 @@ export default function EditProductPage() {
     setSaving(true);
     try {
       const urls = images.filter(i => i.url).map(i => i.url);
-      const res = await fetch(`/backend/admin/products/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, description: form.description, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, category: form.category, section: form.section || null, sizes: form.sizes, colors: form.colors, stockCount: Number(form.stockCount), inStock: form.inStock, images: urls, image: urls[0] ?? "" }) });
+      const res = await fetch(`/api/admin/products/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, description: form.description, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, category: form.category, section: form.section || null, sizes: form.sizes, colors: form.colors, stockCount: Number(form.stockCount), inStock: form.inStock, images: urls, image: urls[0] ?? "" }) });
       if (res.ok) { showToast("Product updated!"); setTimeout(() => router.push("/admin/products"), 1200); }
       else showToast("Failed to save", false);
     } catch { showToast("An error occurred", false); }

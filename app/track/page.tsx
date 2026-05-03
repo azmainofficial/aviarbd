@@ -163,7 +163,7 @@ function TrackContent() {
     setOrder(null);
     try {
       const res = await fetch(
-        `/backend/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`
+        `/api/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`
       );
       const data = await res.json();
       if (!res.ok) {

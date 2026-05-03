@@ -63,7 +63,7 @@ export default function AdminChat() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    const res = await fetch("/backend/admin/chat");
+    const res = await fetch("/api/admin/chat");
     if (!res.ok) return;
     const data = await res.json();
     setConversations(Array.isArray(data.conversations) ? data.conversations.map(mapApiConversation) : []);
@@ -71,7 +71,7 @@ export default function AdminChat() {
   }, []);
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/backend/admin/chat/${convId}`);
+    const res = await fetch(`/api/admin/chat/${convId}`);
     if (!res.ok) return;
     const data = await res.json();
     setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
@@ -116,7 +116,7 @@ export default function AdminChat() {
       { _id: tempId, content, sender: "admin", createdAt: new Date().toISOString() },
     ]);
     try {
-      const res = await fetch(`/backend/admin/chat/${selected}`, {
+      const res = await fetch(`/api/admin/chat/${selected}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -135,7 +135,7 @@ export default function AdminChat() {
   const toggleStatus = async () => {
     if (!selected || !selectedConv) return;
     const newStatus = selectedConv.status === "open" ? "closed" : "open";
-    await fetch(`/backend/admin/chat/${selected}`, {
+    await fetch(`/api/admin/chat/${selected}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),

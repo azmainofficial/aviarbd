@@ -525,7 +525,7 @@ function BuyPageInner({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/backend/products/${encodeURIComponent(slug)}`)
+    fetch(`/api/products/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();

@@ -66,7 +66,7 @@ export default function AbandonedPage() {
   };
 
   useEffect(() => {
-    fetch("/backend/admin/abandoned")
+    fetch("/api/admin/abandoned")
       .then((r) => r.json())
       .then((d: any[]) => { if (Array.isArray(d)) setRecords(d.map(mapApiAbandoned)); })
       .catch(console.error)
@@ -96,7 +96,7 @@ export default function AbandonedPage() {
   const handleStatus = async (id: string, status: string) => {
     setActionLoading(id + status);
     try {
-      const res = await fetch(`/backend/admin/abandoned/${id}`, {
+      const res = await fetch(`/api/admin/abandoned/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -113,7 +113,7 @@ export default function AbandonedPage() {
     if (!confirm("Delete this record? This cannot be undone.")) return;
     setActionLoading(id + "del");
     try {
-      const res = await fetch(`/backend/admin/abandoned/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/abandoned/${id}`, { method: "DELETE" });
       if (res.ok) {
         setRecords((prev) => prev.filter((r) => r._id !== id));
         if (selected?._id === id) setSelected(null);

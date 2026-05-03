@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/backend/admin/dashboard`)
+    fetch(`/api/admin/dashboard`)
       .then(r => r.json())
       .then((d: any) => { 
         if (typeof d?.totalRevenue === "number") {

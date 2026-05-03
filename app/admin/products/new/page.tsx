@@ -38,7 +38,7 @@ export default function AddProductPage() {
 
     // POST to local Next.js API route — Node.js writes directly to disk.
     // Same origin → no CORS, no service worker, no proxy needed.
-    const res = await fetch("/backend/upload", { method: "POST", body: fd });
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
 
     const text = await res.text();
     let json: Record<string, unknown> = {};
@@ -107,7 +107,7 @@ export default function AddProductPage() {
     try {
       const urls = images.filter(i => i.url).map(i => i.url);
       // Use /backend/* — same-origin, routes through Node.js to Laravel (SW-safe)
-      const res = await fetch("/backend/admin/products", {
+      const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

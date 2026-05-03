@@ -64,7 +64,7 @@ export default function LiveChat() {
   };
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/backend/chat/${convId}/messages`);
+    const res = await fetch(`/api/chat/${convId}/messages`);
     if (!res.ok) return;
     const data = await res.json();
     setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
@@ -87,7 +87,7 @@ export default function LiveChat() {
     const check = async () => {
       const sessionId = localStorage.getItem("chat_session_id");
       if (!sessionId) return;
-      const res = await fetch(`/backend/chat?sessionId=${sessionId}`);
+      const res = await fetch(`/api/chat?sessionId=${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
       if (data.conversation) setUnread(Number(data.conversation.unread_by_customer ?? data.conversation.unreadByCustomer ?? 0));
@@ -110,7 +110,7 @@ export default function LiveChat() {
   useEffect(() => {
     const sessionId = localStorage.getItem("chat_session_id");
     if (!sessionId) return;
-    fetch(`/backend/chat?sessionId=${sessionId}`)
+    fetch(`/api/chat?sessionId=${sessionId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.conversation) {
@@ -129,7 +129,7 @@ export default function LiveChat() {
     setStartError("");
     try {
       const sessionId = getOrCreateSessionId();
-      const res = await fetch("/backend/chat", {
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, customerName: name.trim(), customerEmail: email.trim() }),
@@ -162,7 +162,7 @@ export default function LiveChat() {
     ]);
     scrollToBottom();
     try {
-      const res = await fetch(`/backend/chat/${conversation._id}/messages`, {
+      const res = await fetch(`/api/chat/${conversation._id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),

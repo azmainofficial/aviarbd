@@ -12,7 +12,7 @@ export default function AdminCustomersPage() {
   const PER_PAGE = 15;
 
   useEffect(() => {
-    fetch("/backend/admin/orders")
+    fetch("/api/admin/orders")
 
       .then(r => r.json())
       .then((orders: any[]) => {

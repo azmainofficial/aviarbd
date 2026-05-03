@@ -33,7 +33,7 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    fetch("/backend/admin/products")
+    fetch("/api/admin/products")
       .then(r => r.json())
       .then((d: AdminProduct[]) => setProducts(Array.isArray(d) ? d : []))
       .catch(console.error)
@@ -56,7 +56,7 @@ export default function AdminProductsPage() {
     setDeleting(id);
     setConfirmingId(null);
     try {
-      const res = await fetch(`/backend/admin/products/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
       if (res.ok) { 
         setProducts(prev => prev.filter(p => String(p.id || p._id) !== String(id))); 
         showToast("Product deleted"); 

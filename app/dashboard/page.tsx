@@ -65,7 +65,7 @@ export default function DashboardPage() {
     setSavedOrder(info);
     setOrderLoading(true);
 
-    fetch(`/backend/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`)
+    fetch(`/api/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.order) setLatestOrder(data.order); })
       .catch(() => {})

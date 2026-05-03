@@ -90,7 +90,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
   useEffect(() => {
     setLoading(true);
     setActiveImage(0);
-    fetch(`/backend/products/${encodeURIComponent(slug)}`)
+    fetch(`/api/products/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
@@ -112,7 +112,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
   // Fetch related products (same category)
   useEffect(() => {
     if (!product) return;
-    fetch("/backend/products")
+    fetch("/api/products")
       .then((r) => r.json())
       .then((data: unknown) => {
         if (!Array.isArray(data)) return;

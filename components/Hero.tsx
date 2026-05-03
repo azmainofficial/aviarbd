@@ -84,7 +84,7 @@ export default function Hero() {
 
   /* ── Fetch custom slides from Laravel API ── */
   useEffect(() => {
-    fetch("/backend/hero-slides")
+    fetch("/api/hero-slides")
       .then((r) => r.json())
       .then((data: Record<string, unknown>[]) => {
         if (!Array.isArray(data) || data.length === 0) return;

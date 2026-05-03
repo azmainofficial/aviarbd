@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
     async rewrites() {
       return [
         {
+          source: "/api/:path*",
+          destination: `${LARAVEL}/api/:path*`,
+        },
+        {
           source: "/laravel-api/:path*",
           destination: `${LARAVEL}/api/:path*`,
         },
