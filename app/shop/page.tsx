@@ -10,8 +10,7 @@ export const metadata = {
   description: "Browse our curated selection of luxury clothing and accessories.",
 };
 
-export default async function ShopPage(props: { searchParams: Promise<{ filter?: string }> }) {
-  const searchParams = await props.searchParams;
+export default function ShopPage() {
   return (
     <PageTransition>
       <main>
@@ -28,7 +27,7 @@ export default async function ShopPage(props: { searchParams: Promise<{ filter?:
             </p>
           </div>
         </div>
-        <Products shopMode initialFilter={searchParams?.filter} />
+        <Products shopMode />
         <Footer />
       </main>
     </PageTransition>

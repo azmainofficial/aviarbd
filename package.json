@@ -3,12 +3,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cpanel": "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_IS_STATIC_EXPORT=true next build",
+    "build:cpanel": "cross-env NEXT_STATIC_EXPORT=true next build",
     "start": "next start",
     "lint": "eslint",
     "laravel-dev": "vite",
     "laravel-build": "vite build",
-    "build-all": "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_IS_STATIC_EXPORT=true next build && robocopy out public /E /MOVE /XF index.php .htaccess"
+    "build-all": "cross-env NEXT_STATIC_EXPORT=true next build && robocopy out public /E /MOVE /XF index.php .htaccess"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.3.0",
@@ -20,5 +20,18 @@
     "react-dom": "19.2.4",
     "stripe": "^22.1.0"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "axios": "^1.1.2",
+    "cross-env": "^10.1.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "laravel-vite-plugin": "^0.7.2",
+    "tailwindcss": "^4",
+    "typescript": "^5",
+    "vite": "^4.0.0"
+  }
 }
