@@ -15,6 +15,24 @@ interface Conversation {
   unreadByCustomer: number;
 }
 
+function mapApiConversation(p: any): Conversation {
+  if (!p) return p;
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    status: p.status ?? "open",
+    unreadByCustomer: Number(p.unread_by_customer ?? p.unreadByCustomer ?? 0),
+  };
+}
+
+function mapApiMessage(p: any): Message {
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    content: p.content ?? "",
+    sender: p.sender ?? "customer",
+    createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+  };
+}
+
 function getOrCreateSessionId(): string {
   let id = localStorage.getItem("chat_session_id");
   if (!id) {
@@ -46,10 +64,10 @@ export default function LiveChat() {
   };
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/api/chat/${convId}/messages`);
+    const res = await fetch(`/backend/chat/${convId}/messages`);
     if (!res.ok) return;
     const data = await res.json();
-    setMessages(data.messages ?? []);
+    setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
   }, []);
 
   // Poll for new messages when chat is open and conversation exists
@@ -69,10 +87,10 @@ export default function LiveChat() {
     const check = async () => {
       const sessionId = localStorage.getItem("chat_session_id");
       if (!sessionId) return;
-      const res = await fetch(`/api/chat?sessionId=${sessionId}`);
+      const res = await fetch(`/backend/chat?sessionId=${sessionId}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.conversation) setUnread(data.conversation.unreadByCustomer ?? 0);
+      if (data.conversation) setUnread(Number(data.conversation.unread_by_customer ?? data.conversation.unreadByCustomer ?? 0));
     };
     check();
     const id = setInterval(check, 10000);
@@ -92,13 +110,14 @@ export default function LiveChat() {
   useEffect(() => {
     const sessionId = localStorage.getItem("chat_session_id");
     if (!sessionId) return;
-    fetch(`/api/chat?sessionId=${sessionId}`)
+    fetch(`/backend/chat?sessionId=${sessionId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.conversation) {
-          setConversation(data.conversation);
+          const conv = mapApiConversation(data.conversation);
+          setConversation(conv);
           setStarted(true);
-          setUnread(data.conversation.unreadByCustomer ?? 0);
+          setUnread(conv.unreadByCustomer);
         }
       })
       .catch(() => {});
@@ -110,17 +129,18 @@ export default function LiveChat() {
     setStartError("");
     try {
       const sessionId = getOrCreateSessionId();
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/backend/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, customerName: name.trim(), customerEmail: email.trim() }),
       });
       if (!res.ok) throw new Error(`Server error ${res.status}`);
       const data = await res.json();
-      if (!data.conversation?._id) throw new Error("No conversation returned");
-      setConversation(data.conversation);
+      const conv = mapApiConversation(data.conversation);
+      if (!conv?._id) throw new Error("No conversation returned");
+      setConversation(conv);
       setStarted(true);
-      await fetchMessages(data.conversation._id);
+      await fetchMessages(conv._id);
     } catch (err) {
       setStartError("Could not connect. Please try again.");
       console.error("startChat error:", err);
@@ -142,7 +162,7 @@ export default function LiveChat() {
     ]);
     scrollToBottom();
     try {
-      const res = await fetch(`/api/chat/${conversation._id}/messages`, {
+      const res = await fetch(`/backend/chat/${conversation._id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -169,12 +189,15 @@ export default function LiveChat() {
   // Don't render the widget on admin pages
   if (pathname.startsWith("/admin")) return null;
 
+  const isProductPage = pathname.startsWith("/product/");
+  const baseBottom = isProductPage ? 110 : 24;
+
   return (
     <>
       {/* Chat window */}
       {open && (
         <div style={{
-          position: "fixed", bottom: 90, right: 24, zIndex: 10000,
+          position: "fixed", bottom: baseBottom + 66, right: 24, zIndex: 10000,
           width: 360, maxWidth: "calc(100vw - 48px)",
           background: "#fff",
           boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
@@ -332,7 +355,7 @@ export default function LiveChat() {
       <button
         onClick={() => setOpen((v) => !v)}
         style={{
-          position: "fixed", bottom: 24, right: 24, zIndex: 10000,
+          position: "fixed", bottom: baseBottom, right: 24, zIndex: 10000,
           width: 56, height: 56, borderRadius: "50%",
           background: "#0a0a0a", border: "none",
           cursor: "pointer", boxShadow: "0 4px 20px rgba(0,0,0,0.25)",

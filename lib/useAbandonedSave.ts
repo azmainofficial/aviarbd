@@ -46,24 +46,21 @@ export function useAbandonedSave() {
     // Debounce — wait 1.5 s after last keystroke before saving
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      fetch("/api/abandoned", {
+      fetch("/backend/abandoned", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sessionId: getSessionId(),
           customer: {
-            name: params.name,
             email,
-            address: params.address,
+            name: params.name,
             city: params.city,
             country: params.country,
-            zip: params.zip,
           },
           items: params.items,
           total: params.total,
           source: params.source,
         }),
-      }).catch(() => null); // Fire-and-forget, never block the user
+      }).catch(console.error);
       savedRef.current = true;
     }, 1500);
   };

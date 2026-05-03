@@ -1,24 +1,27 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useState, useEffect } from "react";
 
 const STORAGE_KEY = "aviar_announcement_dismissed";
 
 export default function AnnouncementBar() {
-  const dismissed = useSyncExternalStore(
-    () => () => {},
-    () => {
-      try { return localStorage.getItem(STORAGE_KEY) === "1"; } catch { return false; }
-    },
-    () => false
-  );
-  const [closed, setClosed] = useState(false);
+  const [dismissed, setDismissed] = useState(true); // default true or wait for mount
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    try {
+      if (localStorage.getItem(STORAGE_KEY) !== "1") {
+        setDismissed(false);
+      }
+    } catch {}
+  }, []);
 
   const handleClose = () => {
-    setClosed(true);
+    setDismissed(true);
     try { localStorage.setItem(STORAGE_KEY, "1"); } catch {}
   };
 
-  if (dismissed || closed) return null;
+  if (!mounted || dismissed) return null;
 
   return (
     <div

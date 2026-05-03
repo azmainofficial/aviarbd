@@ -36,9 +36,9 @@ export default function AboutPage() {
 
       {/* Stats */}
       <section style={{ background: "#f5f2ec", padding: "clamp(48px,8vw,80px) clamp(20px,5vw,48px)" }}>
-        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "32px", textAlign: "center" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "32px", textAlign: "center" }}>
           {[["5+", "Years of Craft"], ["100%", "Ethical Sourcing"], ["98%", "Customer Satisfaction"]].map(([num, label]) => (
-            <div key={label}>
+            <div key={label} style={{ flex: "1 1 200px", minWidth: 0 }}>
               <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(40px,6vw,56px)", fontWeight: 300, color: "#c9a96e", lineHeight: 1 }}>{num}</div>
               <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginTop: "12px" }}>{label}</div>
             </div>
@@ -53,13 +53,13 @@ export default function AboutPage() {
             <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "16px" }}>What We Stand For</div>
             <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(28px,4vw,56px)", fontWeight: 300, color: "#fafaf8" }}>Our <em>Values</em></h2>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "32px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "32px" }}>
             {[
               ["Quality", "Every stitch, every seam is held to the highest standard. We never compromise on materials or craft."],
               ["Sustainability", "We source responsibly, minimize waste, and partner only with suppliers who share our environmental values."],
               ["Timelessness", "We design pieces that outlast trends. Our collections are meant to be worn for years, not just one season."],
             ].map(([title, desc]) => (
-              <div key={title} style={{ borderTop: "0.5px solid rgba(201,169,110,0.3)", paddingTop: "32px" }}>
+              <div key={title} style={{ flex: "1 1 280px", minWidth: 0, borderTop: "0.5px solid rgba(201,169,110,0.3)", paddingTop: "32px" }}>
                 <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "24px", fontWeight: 300, color: "#fafaf8", marginBottom: "16px" }}>{title}</div>
                 <p style={{ fontSize: "14px", lineHeight: 1.8, color: "rgba(255,255,255,0.5)" }}>{desc}</p>
               </div>

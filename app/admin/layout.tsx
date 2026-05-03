@@ -98,7 +98,9 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
 
   const handleLogout = async () => {
-    await fetch("/api/admin/logout", { method: "POST" });
+    const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+    await fetch(`${API}/admin/logout`, { method: "POST", credentials: "include" });
+    localStorage.removeItem("admin_token");
     router.push("/admin/login");
   };
 
@@ -244,14 +246,25 @@ function MobileBottomNav() {
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
+  const pathname  = usePathname();
+  const router    = useRouter();
   const isDesktop = useIsDesktop();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Close drawer when navigating
   useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
-  if (pathname === "/admin/login") return <div data-admin="true" style={{ minHeight: "100vh" }}>{children}</div>;
+  // Client-side auth guard
+  useEffect(() => {
+    if (pathname !== "/admin/login" && pathname !== "/admin/login/" && !localStorage.getItem("admin_token")) {
+      router.replace("/admin/login");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
+  if (pathname === "/admin/login" || pathname === "/admin/login/") {
+    return <div data-admin="true" style={{ minHeight: "100vh" }}>{children}</div>;
+  }
 
   return (
     <div data-admin="true" style={{ minHeight: "100vh", background: "#f4f4f2", display: "flex" }}>

@@ -20,6 +20,28 @@ interface Message {
   createdAt: string;
 }
 
+function mapApiConversation(p: any): Conversation {
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    customerName: p.customer_name ?? p.customerName ?? "Unknown",
+    customerEmail: p.customer_email ?? p.customerEmail ?? "",
+    status: p.status ?? "open",
+    unreadByAdmin: Number(p.unread_by_admin ?? p.unreadByAdmin ?? 0),
+    lastMessage: p.last_message ?? p.lastMessage ?? "",
+    lastMessageAt: p.last_message_at ?? p.lastMessageAt ?? p.created_at ?? new Date().toISOString(),
+    createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+  };
+}
+
+function mapApiMessage(p: any): Message {
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    content: p.content ?? "",
+    sender: p.sender ?? "customer",
+    createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+  };
+}
+
 export default function AdminChat() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -41,19 +63,19 @@ export default function AdminChat() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    const res = await fetch("/api/admin/chat");
+    const res = await fetch("/backend/admin/chat");
     if (!res.ok) return;
     const data = await res.json();
-    setConversations(data.conversations ?? []);
+    setConversations(Array.isArray(data.conversations) ? data.conversations.map(mapApiConversation) : []);
     setLoadingConvs(false);
   }, []);
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/api/admin/chat/${convId}`);
+    const res = await fetch(`/backend/admin/chat/${convId}`);
     if (!res.ok) return;
     const data = await res.json();
-    setMessages(data.messages ?? []);
-    setSelectedConv(data.conversation ?? null);
+    setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
+    setSelectedConv(data.conversation ? mapApiConversation(data.conversation) : null);
     setConversations((prev) =>
       prev.map((c) => (c._id === convId ? { ...c, unreadByAdmin: 0 } : c))
     );
@@ -94,7 +116,7 @@ export default function AdminChat() {
       { _id: tempId, content, sender: "admin", createdAt: new Date().toISOString() },
     ]);
     try {
-      const res = await fetch(`/api/admin/chat/${selected}`, {
+      const res = await fetch(`/backend/admin/chat/${selected}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -113,7 +135,7 @@ export default function AdminChat() {
   const toggleStatus = async () => {
     if (!selected || !selectedConv) return;
     const newStatus = selectedConv.status === "open" ? "closed" : "open";
-    await fetch(`/api/admin/chat/${selected}`, {
+    await fetch(`/backend/admin/chat/${selected}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),

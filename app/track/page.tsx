@@ -163,7 +163,7 @@ function TrackContent() {
     setOrder(null);
     try {
       const res = await fetch(
-        `/api/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`
+        `/backend/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`
       );
       const data = await res.json();
       if (!res.ok) {
@@ -191,13 +191,22 @@ function TrackContent() {
     } catch {}
 
     const urlOrder = params.get("order")?.toUpperCase() ?? "";
-    const finalOrder = urlOrder || saved?.orderNumber || "";
-    const finalEmail = saved?.email || "";
 
-    if (finalOrder) setOrderNumber(finalOrder);
-    if (finalEmail) setEmail(finalEmail);
-    if (finalOrder && finalEmail) {
-      fetchOrder(finalOrder, finalEmail);
+    if (urlOrder) {
+      setOrderNumber(urlOrder);
+      // If the URL order matches the saved order, we can safely use the saved email and auto-fetch
+      if (saved && saved.orderNumber === urlOrder && saved.email) {
+        setEmail(saved.email);
+        fetchOrder(urlOrder, saved.email);
+      } else {
+        // New order from URL. Do not use the old saved email!
+        setEmail("");
+      }
+    } else if (saved && saved.orderNumber && saved.email) {
+      // No URL order, just restore the last tracked order from local storage
+      setOrderNumber(saved.orderNumber);
+      setEmail(saved.email);
+      fetchOrder(saved.orderNumber, saved.email);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -349,8 +358,12 @@ function TrackContent() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {order.items.map((item, i) => (
                   <div key={i} style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                    <div style={{ width: 56, height: 56, background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                      {item.image ?? "🛍️"}
+                    <div style={{ width: 56, height: 56, background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, overflow: "hidden" }}>
+                      {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
+                        <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        item.image ?? "🛍️"
+                      )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 16, color: "#0a0a0a" }}>{item.name}</div>

@@ -47,15 +47,22 @@ const headingStyle: React.CSSProperties = {
 export default function Footer() {
   const [cols, setCols] = useState(4);
 
+    const [openSection, setOpenSection] = useState<string | null>(null);
+
   useEffect(() => {
     const update = () => {
       const w = window.innerWidth;
-      setCols(w < 640 ? 1 : w < 1024 ? 2 : 4);
+      setCols(w < 768 ? 1 : w < 1024 ? 2 : 4);
+      if (w >= 768) setOpenSection(null); // Reset accordion on desktop
     };
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  const toggleSection = (sec: string) => {
+    if (cols === 1) setOpenSection(prev => prev === sec ? null : sec);
+  };
 
   return (
     <footer style={{
@@ -64,16 +71,16 @@ export default function Footer() {
       borderTop: "0.5px solid rgba(201,169,110,0.15)",
       paddingTop: cols === 1 ? "48px" : "64px",
       paddingBottom: cols === 1 ? "32px" : "40px",
-      paddingLeft: cols === 1 ? "20px" : "48px",
-      paddingRight: cols === 1 ? "20px" : "48px",
+      paddingLeft: "max(20px, 5vw)",
+      paddingRight: "max(20px, 5vw)",
     }}>
       <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
 
         {/* Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols === 1 ? "40px" : "48px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: `repeat(${cols}, 1fr)`, gap: cols === 1 ? "24px" : "48px" }}>
 
           {/* Brand */}
-          <div>
+          <div style={{ marginBottom: cols === 1 ? "24px" : 0 }}>
             <Link href="/" style={{ display: "block", textDecoration: "none", marginBottom: "16px" }}>
               <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "28px", letterSpacing: "0.15em", color: "#fafaf8" }}>AVIAR</div>
               <div style={{ fontSize: "9px", letterSpacing: "0.3em", textTransform: "uppercase", color: "#c9a96e", marginTop: "2px" }}>Premium Collection</div>
@@ -97,42 +104,72 @@ export default function Footer() {
           </div>
 
           {/* Shop */}
-          <div>
-            <div style={headingStyle}>Shop</div>
-            {SHOP_LINKS.map((l) => (
-              <Link key={l.href} href={l.href} style={linkStyle}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
-                {l.label}
-              </Link>
-            ))}
+          <div style={cols === 1 ? { borderBottom: "0.5px solid rgba(255,255,255,0.06)", paddingBottom: "16px" } : {}}>
+            <div 
+              style={{ ...headingStyle, marginBottom: cols === 1 ? 0 : "24px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: cols === 1 ? "pointer" : "default" }}
+              onClick={() => toggleSection("shop")}
+            >
+              Shop
+              {cols === 1 && <span style={{ fontSize: "14px", fontWeight: 300 }}>{openSection === "shop" ? "−" : "+"}</span>}
+            </div>
+            {(cols !== 1 || openSection === "shop") && (
+              <div style={{ marginTop: cols === 1 ? "20px" : 0 }}>
+                {SHOP_LINKS.map((l) => (
+                  <Link key={l.href} href={l.href} style={linkStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Company */}
-          <div>
-            <div style={headingStyle}>Company</div>
-            {COMPANY_LINKS.map((l) => (
-              <Link key={l.label} href={l.href} style={linkStyle}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
-                {l.label}
-              </Link>
-            ))}
+          <div style={cols === 1 ? { borderBottom: "0.5px solid rgba(255,255,255,0.06)", paddingBottom: "16px" } : {}}>
+            <div 
+              style={{ ...headingStyle, marginBottom: cols === 1 ? 0 : "24px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: cols === 1 ? "pointer" : "default" }}
+              onClick={() => toggleSection("company")}
+            >
+              Company
+              {cols === 1 && <span style={{ fontSize: "14px", fontWeight: 300 }}>{openSection === "company" ? "−" : "+"}</span>}
+            </div>
+            {(cols !== 1 || openSection === "company") && (
+              <div style={{ marginTop: cols === 1 ? "20px" : 0 }}>
+                {COMPANY_LINKS.map((l) => (
+                  <Link key={l.label} href={l.href} style={linkStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Help */}
-          <div>
-            <div style={headingStyle}>Help</div>
-            {HELP_LINKS.map((l) => (
-              <Link key={l.label} href={l.href} style={linkStyle}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
-                {l.label}
-              </Link>
-            ))}
+          <div style={cols === 1 ? { borderBottom: "0.5px solid rgba(255,255,255,0.06)", paddingBottom: "16px" } : {}}>
+            <div 
+              style={{ ...headingStyle, marginBottom: cols === 1 ? 0 : "24px", display: "flex", justifyContent: "space-between", alignItems: "center", cursor: cols === 1 ? "pointer" : "default" }}
+              onClick={() => toggleSection("help")}
+            >
+              Help
+              {cols === 1 && <span style={{ fontSize: "14px", fontWeight: 300 }}>{openSection === "help" ? "−" : "+"}</span>}
+            </div>
+            {(cols !== 1 || openSection === "help") && (
+              <div style={{ marginTop: cols === 1 ? "20px" : 0 }}>
+                {HELP_LINKS.map((l) => (
+                  <Link key={l.label} href={l.href} style={linkStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = "#ffffff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = "rgba(255,255,255,0.5)"; }}>
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Newsletter teaser */}
-            <div style={{ marginTop: 32, paddingTop: 24, borderTop: "0.5px solid rgba(255,255,255,0.07)" }}>
+            <div style={{ marginTop: cols === 1 ? 24 : 32, paddingTop: 24, borderTop: cols === 1 && openSection !== "help" ? "none" : "0.5px solid rgba(255,255,255,0.07)" }}>
               <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginBottom: 12, letterSpacing: "0.06em" }}>
                 Stay in the loop
               </div>

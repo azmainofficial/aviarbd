@@ -1,46 +1,27 @@
 import type { NextConfig } from "next";
 
-const securityHeaders = [
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  { key: "X-XSS-Protection", value: "1; mode=block" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(self)",
-  },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-];
+const LARAVEL = process.env.LARAVEL_API_URL || "http://localhost:8000";
+
+// Set NEXT_STATIC_EXPORT=true when building for cPanel (static HTML export).
+// Leave unset in dev so rewrites and middleware work normally.
+const isStaticExport = process.env.NEXT_STATIC_EXPORT === "true";
 
 const nextConfig: NextConfig = {
+  ...(isStaticExport ? { output: "export", trailingSlash: true } : {}),
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "res.cloudinary.com",
-      },
-    ],
+    unoptimized: true,
   },
-  async headers() {
-    return [
-      {
-        // Apply security headers to all routes
-        source: "/(.*)",
-        headers: securityHeaders,
-      },
-      {
-        // Extra protection on admin routes — deny framing entirely
-        source: "/admin/(.*)",
-        headers: [
-          { key: "X-Frame-Options", value: "DENY" },
-          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate" },
-        ],
-      },
-    ];
-  },
+  // Proxy /laravel-api/* → Laravel in dev mode (bypasses browser service workers)
+  ...(!isStaticExport ? {
+    async rewrites() {
+      return [
+        {
+          source: "/laravel-api/:path*",
+          destination: `${LARAVEL}/api/:path*`,
+        },
+      ];
+    },
+  } : {}),
 };
 
 export default nextConfig;

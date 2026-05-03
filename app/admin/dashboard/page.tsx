@@ -36,9 +36,29 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/dashboard")
+    fetch(`/backend/admin/dashboard`)
       .then(r => r.json())
-      .then((d: DashboardData) => { if (typeof d?.totalRevenue === "number") setData(d); })
+      .then((d: any) => { 
+        if (typeof d?.totalRevenue === "number") {
+          const mappedOrders = Array.isArray(d.recentOrders) ? d.recentOrders.map((o: any) => ({
+            _id: String(o.id ?? o._id ?? ""),
+            orderNumber: o.order_number ?? o.orderNumber ?? "",
+            customer: {
+              name: o.customer_name ?? o.customer?.name,
+              email: o.customer_email ?? o.customer?.email
+            },
+            total: Number(o.total ?? 0),
+            status: o.status ?? "pending",
+            createdAt: o.created_at ?? o.createdAt ?? new Date().toISOString(),
+            items: o.items ?? []
+          })) : [];
+          
+          setData({
+            ...d,
+            recentOrders: mappedOrders
+          });
+        } 
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -113,7 +133,7 @@ export default function AdminDashboard() {
                       <tr key={order._id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.04)" }}>
                         <td style={{ padding: "16px 16px 16px 28px", fontFamily: "monospace", fontSize: "12px", color: "#c9a96e" }}>{order.orderNumber}</td>
                         <td style={{ padding: "16px", fontSize: "13px" }}>{order.customer?.name ?? order.customer?.email ?? "—"}</td>
-                        <td style={{ padding: "16px", fontSize: "13px", fontWeight: 500 }}>${order.total.toFixed(2)}</td>
+                        <td style={{ padding: "16px", fontSize: "13px", fontWeight: 500 }}>${Number(order.total || 0).toFixed(2)}</td>
                         <td style={{ padding: "16px" }}>
                           <span style={{ fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, padding: "4px 10px", borderRadius: 100, color: cfg.color, background: cfg.bg }}>{cfg.label}</span>
                         </td>
@@ -143,6 +163,10 @@ export default function AdminDashboard() {
               <Link href="/admin/orders" style={{ display: "flex", alignItems: "center", gap: "8px", border: "0.5px solid rgba(0,0,0,0.2)", color: "#0a0a0a", padding: "12px 16px", fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
                 <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></svg>
                 View Orders
+              </Link>
+              <Link href="/admin/hero" style={{ display: "flex", alignItems: "center", gap: "8px", border: "0.5px solid rgba(0,0,0,0.2)", color: "#0a0a0a", padding: "12px 16px", fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Manage Hero Slides
               </Link>
             </div>
           </div>
@@ -178,3 +202,5 @@ export default function AdminDashboard() {
     </motion.div>
   );
 }
+
+

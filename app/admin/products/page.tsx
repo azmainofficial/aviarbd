@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 interface AdminProduct {
-  _id: string; name: string; price: number; originalPrice?: number;
+  _id?: string; id?: string; name: string; price: number; originalPrice?: number;
   section?: string; category: string; badge?: string;
   inStock: boolean; stockCount: number; images: string[]; image?: string; icon?: string;
 }
@@ -33,7 +33,7 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    fetch("/api/admin/products")
+    fetch("/backend/admin/products")
       .then(r => r.json())
       .then((d: AdminProduct[]) => setProducts(Array.isArray(d) ? d : []))
       .catch(console.error)
@@ -50,14 +50,25 @@ export default function AdminProductsPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
     setDeleting(id);
+    setConfirmingId(null);
     try {
-      const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-      if (res.ok) { setProducts(prev => prev.filter(p => p._id !== id)); showToast("Product deleted"); }
-      else showToast("Failed to delete", false);
-    } finally { setDeleting(null); }
+      const res = await fetch(`/backend/admin/products/${id}`, { method: "DELETE" });
+      if (res.ok) { 
+        setProducts(prev => prev.filter(p => String(p.id || p._id) !== String(id))); 
+        showToast("Product deleted"); 
+      } else {
+        const text = await res.text();
+        showToast(`Failed (${res.status}): ${text.slice(0, 40)}`, false);
+      }
+    } catch (e: any) {
+      showToast("Error: " + (e.message || "Network fail"), false);
+    } finally { 
+      setDeleting(null); 
+    }
   };
 
   const filterBtns = [["all", "All"], ["collection", "Collection"], ["new_arrival", "New Arrival"], ["sale", "Sale"]];
@@ -120,10 +131,11 @@ export default function AdminProductsPage() {
               </thead>
               <tbody>
                 {paginated.map(p => {
+                  const pid = String(p.id || p._id);
                   const thumb = p.images?.[0] ?? p.image;
                   const sc = SEC_COLOR[p.section ?? ""] ?? null;
                   return (
-                    <tr key={p._id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.05)" }}>
+                    <tr key={pid} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.05)" }}>
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                           <div style={{ width: 44, height: 44, background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", flexShrink: 0 }}>
@@ -153,10 +165,16 @@ export default function AdminProductsPage() {
                       </td>
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", gap: 16 }}>
-                          <Link href={`/admin/products/${p._id}`} style={{ fontSize: "12px", color: "#0a0a0a", textDecoration: "none", borderBottom: "0.5px solid rgba(0,0,0,0.3)", paddingBottom: 1 }}>Edit</Link>
-                          <button onClick={() => handleDelete(p._id, p.name)} disabled={deleting === p._id}
-                            style={{ fontSize: "12px", color: "#c0392b", background: "none", border: "none", borderBottom: "0.5px solid rgba(192,57,43,0.3)", paddingBottom: 1, opacity: deleting === p._id ? 0.5 : 1 }}>
-                            {deleting === p._id ? "…" : "Delete"}
+                          <Link href={`/admin/products/${pid}`} style={{ fontSize: "12px", color: "#0a0a0a", textDecoration: "none", borderBottom: "0.5px solid rgba(0,0,0,0.3)", paddingBottom: 1 }}>Edit</Link>
+                          <button 
+                            onClick={() => {
+                              if (confirmingId === pid) handleDelete(pid);
+                              else setConfirmingId(pid);
+                            }} 
+                            disabled={deleting === pid}
+                            onMouseLeave={() => { if (confirmingId === pid) setConfirmingId(null); }}
+                            style={{ fontSize: "12px", color: "#c0392b", background: "none", border: "none", borderBottom: "0.5px solid rgba(192,57,43,0.3)", paddingBottom: 1, opacity: deleting === pid ? 0.5 : 1, cursor: "pointer", transition: "all 0.2s" }}>
+                            {deleting === pid ? "…" : confirmingId === pid ? "Sure?" : "Delete"}
                           </button>
                         </div>
                       </td>
@@ -191,3 +209,5 @@ export default function AdminProductsPage() {
     </motion.div>
   );
 }
+
+

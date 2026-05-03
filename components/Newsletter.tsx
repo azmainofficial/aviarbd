@@ -40,7 +40,7 @@ export default function Newsletter() {
           Unlock early access to archival releases, private previews, and exclusive invitations to our seasonal events.
         </p>
 
-        <div className="w-full" style={{ maxWidth: "560px" }}>
+        <div className="w-full flex flex-col" style={{ maxWidth: "560px" }}>
           <AnimatePresence mode="wait">
             {isSubmitted ? (
               <motion.div
@@ -57,7 +57,7 @@ export default function Newsletter() {
                 onSubmit={handleSubmit}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="relative flex items-center w-full gap-4 group border-b border-black/[0.1] pb-4 transition-colors duration-700 focus-within:border-gold"
+                className="relative flex items-center justify-between w-full gap-4 group border-b border-black/[0.1] pb-5 transition-colors duration-700 focus-within:border-gold"
               >
                 <input
                   type="email"
@@ -65,12 +65,13 @@ export default function Newsletter() {
                   placeholder="Your Email Address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="flex-1 bg-transparent py-4 text-[16px] text-black placeholder:text-black/20 focus:outline-none rounded-none border-none outline-none"
+                  style={{ minWidth: 0 }}
+                  className="flex-1 bg-transparent py-2 text-[15px] text-black placeholder:text-black/30 focus:outline-none rounded-none border-none outline-none"
                 />
 
                 <button
                   type="submit"
-                  className="bg-transparent text-black px-2 py-4 text-[12px] uppercase tracking-[0.3em] font-medium transition-all duration-300 hover:text-gold flex items-center gap-3 group/btn border-none outline-none"
+                  className="bg-transparent text-black py-2 text-[11px] md:text-[12px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-all duration-300 hover:text-gold flex items-center gap-2 group/btn border-none outline-none flex-shrink-0"
                 >
                   <span className="relative">
                     Subscribe
@@ -92,9 +93,9 @@ export default function Newsletter() {
 
           <motion.div
             initial={{ opacity: 0 }}
-            whileInView={{ opacity: 0.3 }}
+            whileInView={{ opacity: 1 }}
             transition={{ delay: 1 }}
-            className="mt-16 text-[9px] text-black tracking-[0.3em] uppercase opacity-30"
+            className="mt-12 text-[9px] text-black/40 tracking-[0.3em] uppercase w-full text-center"
           >
             Membership is subject to editorial approval
           </motion.div>

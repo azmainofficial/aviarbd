@@ -12,18 +12,30 @@ export default function AdminCustomersPage() {
   const PER_PAGE = 15;
 
   useEffect(() => {
-    fetch("/api/admin/orders")
+    fetch("/backend/admin/orders")
+
       .then(r => r.json())
-      .then((orders: Array<{ customer?: { name?: string; firstName?: string; lastName?: string; email?: string; city?: string; country?: string }; total?: number; createdAt?: string }>) => {
+      .then((orders: any[]) => {
         if (!Array.isArray(orders)) return;
         const map = new Map<string, Customer>();
         for (const o of orders) {
-          const email = o.customer?.email ?? ""; if (!email) continue;
-          const name = o.customer?.name ?? ([o.customer?.firstName, o.customer?.lastName].filter(Boolean).join(" ") || "—");
-          const location = [o.customer?.city, o.customer?.country].filter(Boolean).join(", ");
+          const email = o.customer_email ?? o.customer?.email ?? ""; 
+          if (!email) continue;
+          
+          const name = o.customer_name ?? o.customer?.name ?? ([o.customer_first_name ?? o.customer?.firstName, o.customer_last_name ?? o.customer?.lastName].filter(Boolean).join(" ") || "—");
+          const location = [o.customer_city ?? o.customer?.city, o.customer_country ?? o.customer?.country].filter(Boolean).join(", ");
+          const total = Number(o.total ?? 0);
+          const createdAt = o.created_at ?? o.createdAt ?? "";
+
           const ex = map.get(email);
-          if (ex) { ex.orderCount++; ex.totalSpent += o.total ?? 0; if (o.createdAt && o.createdAt > ex.lastOrder) ex.lastOrder = o.createdAt; }
-          else map.set(email, { email, name, orderCount: 1, totalSpent: o.total ?? 0, lastOrder: o.createdAt ?? "", location });
+          if (ex) { 
+            ex.orderCount++; 
+            ex.totalSpent += total; 
+            if (createdAt && createdAt > ex.lastOrder) ex.lastOrder = createdAt; 
+          }
+          else {
+            map.set(email, { email, name, orderCount: 1, totalSpent: total, lastOrder: createdAt, location });
+          }
         }
         setCustomers(Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent));
       })
@@ -129,3 +141,5 @@ export default function AdminCustomersPage() {
     </motion.div>
   );
 }
+
+

@@ -1,15 +1,21 @@
 "use client";
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function BackToTop() {
   const [visible, setVisible] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 500);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  const isProductPage = pathname?.startsWith("/product/");
+  const baseBottom = isProductPage ? 110 : 24; // Align with chat widget base
+  const bottomPosition = baseBottom + 56 + 16; // Chat base + Chat Height + Gap
 
   return (
     <AnimatePresence>
@@ -24,8 +30,8 @@ export default function BackToTop() {
           className="group"
           style={{
             position: "fixed",
-            bottom: "40px",
-            right: "40px",
+            bottom: `${bottomPosition}px`,
+            right: "24px",
             zIndex: 300,
             width: "56px",
             height: "56px",

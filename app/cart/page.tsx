@@ -73,8 +73,12 @@ export default function CartPage() {
                     style={{ display: "flex", gap: isDesktop ? "24px" : "14px", padding: isDesktop ? "32px 0" : "20px 0", borderBottom: "0.5px solid rgba(0,0,0,0.08)" }}
                   >
                     {/* Image */}
-                    <div style={{ width: isDesktop ? "120px" : "84px", height: isDesktop ? "150px" : "108px", background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isDesktop ? "48px" : "32px" }}>
-                      {item.image}
+                    <div style={{ width: isDesktop ? "120px" : "84px", height: isDesktop ? "150px" : "108px", background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: isDesktop ? "48px" : "32px", overflow: "hidden" }}>
+                      {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
+                        <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        item.image ?? "🛍️"
+                      )}
                     </div>
 
                     {/* Info */}

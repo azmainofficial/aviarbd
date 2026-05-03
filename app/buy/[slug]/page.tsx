@@ -1,16 +1,12 @@
 "use client";
 import { useState, useEffect, type ChangeEvent, type SyntheticEvent, use } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAbandonedSave } from "@/lib/useAbandonedSave";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "");
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -31,27 +27,12 @@ interface BuyProduct {
   inStock?: boolean;
 }
 
-type PayMethod = "card" | "cod";
-
-const CARD_OPTS = {
-  style: {
-    base: {
-      fontSize: "14px",
-      fontFamily: "DM Sans, sans-serif",
-      color: "#0a0a0a",
-      "::placeholder": { color: "#8a8680" },
-      iconColor: "#c9a96e",
-    },
-    invalid: { color: "#c0392b" },
-  },
-};
+type PayMethod = "cod";
 
 // ─── Inner form (needs Stripe context) ───────────────────────────────────────
 
 function BuyForm({ product }: { product: BuyProduct }) {
   const router = useRouter();
-  const stripe = useStripe();
-  const elements = useElements();
 
   const [selectedSize, setSelectedSize] = useState(product.sizes[0] ?? "");
   const [selectedColor, setSelectedColor] = useState(product.colors[0] ?? "");
@@ -139,7 +120,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
       };
 
       if (payMethod === "cod") {
-        const res = await fetch("/api/orders", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderPayload),
@@ -150,37 +131,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
         return;
       }
 
-      // Stripe card payment
-      const intentRes = await fetch("/api/create-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total }),
-      });
-      const { clientSecret, error: serverError } = await intentRes.json() as { clientSecret?: string; error?: string };
-      if (serverError) { setError(serverError); setLoading(false); return; }
-      if (!stripe || !elements) { setError("Stripe not loaded"); setLoading(false); return; }
 
-      const cardEl = elements.getElement(CardElement);
-      if (!cardEl) { setError("Card element not found"); setLoading(false); return; }
-
-      const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret!, {
-        payment_method: {
-          card: cardEl,
-          billing_details: { name: `${form.firstName} ${form.lastName}`, email: form.email },
-        },
-      });
-
-      if (stripeErr) { setError(stripeErr.message ?? "Payment failed"); setLoading(false); return; }
-
-      if (paymentIntent?.status === "succeeded") {
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...orderPayload, paymentIntentId: paymentIntent.id }),
-        });
-        const data = await res.json() as { orderNumber?: string };
-        router.push(`/order/confirmation?order=${encodeURIComponent(data.orderNumber ?? "")}`);
-      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -460,31 +411,9 @@ function BuyForm({ product }: { product: BuyProduct }) {
                 <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680" }}>Payment Method</div>
               </div>
               <div style={{ padding: "20px 24px" }}>
-                <div style={{ display: "flex", border: "0.5px solid rgba(0,0,0,0.15)", marginBottom: 20 }}>
-                  {(["cod", "card"] as PayMethod[]).map((m) => (
-                    <button key={m} type="button" onClick={() => setPayMethod(m)}
-                      style={{ flex: 1, padding: "12px", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", background: payMethod === m ? "#0a0a0a" : "none", color: payMethod === m ? "#fafaf8" : "#8a8680", border: "none", cursor: "pointer", transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
-                      {m === "cod" ? "🚚 Cash on Delivery" : "💳 Credit / Debit Card"}
-                    </button>
-                  ))}
+                <div style={{ padding: "16px", background: "#f5f2ec", border: "0.5px solid rgba(201,169,110,0.3)", fontSize: "13px", color: "#3a3835", lineHeight: 1.8 }}>
+                  🚚 Pay in cash when your order arrives at your door.
                 </div>
-                <AnimatePresence mode="wait">
-                  {payMethod === "card" ? (
-                    <motion.div key="card" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-                      <div style={{ padding: "14px 16px", border: "0.5px solid rgba(0,0,0,0.15)", background: "#fafaf8", marginBottom: 8 }}>
-                        <CardElement options={CARD_OPTS} />
-                      </div>
-                      <p style={{ fontSize: "11px", color: "#8a8680", margin: 0 }}>
-                        🔒 Your card details are encrypted by Stripe
-                      </p>
-                    </motion.div>
-                  ) : (
-                    <motion.div key="cod" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}
-                      style={{ padding: "16px", background: "#f5f2ec", border: "0.5px solid rgba(201,169,110,0.3)", fontSize: "13px", color: "#3a3835", lineHeight: 1.8 }}>
-                      🚚 Pay in cash when your order arrives at your door.
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </div>
 
@@ -596,7 +525,7 @@ function BuyPageInner({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/products/${encodeURIComponent(slug)}`)
+    fetch(`/backend/products/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
@@ -620,11 +549,7 @@ function BuyPageInner({ slug }: { slug: string }) {
   if (loading) return <BuySkeleton />;
   if (!product) return null;
 
-  return (
-    <Elements stripe={stripePromise}>
-      <BuyForm product={product} />
-    </Elements>
-  );
+  return <BuyForm product={product} />;
 }
 
 export default function BuyPage({ params }: { params: Promise<{ slug: string }> }) {

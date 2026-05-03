@@ -33,28 +33,64 @@ export default function AddProductPage() {
   const showToast = (message: string, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast(t => ({ ...t, show: false })), 3500); };
 
   const uploadFile = useCallback(async (file: File): Promise<string> => {
-    const fd = new FormData(); fd.append("file", file); fd.append("section", form.section || "collection");
-    const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => null);
-      console.error("Upload failed details:", errData);
-      throw new Error(errData?.details || errData?.message || "Upload failed");
+    const fd = new FormData();
+    fd.append("image", file);
+
+    // POST to local Next.js API route — Node.js writes directly to disk.
+    // Same origin → no CORS, no service worker, no proxy needed.
+    const res = await fetch("/backend/upload", { method: "POST", body: fd });
+
+    const text = await res.text();
+    let json: Record<string, unknown> = {};
+    try {
+      json = JSON.parse(text);
+    } catch {
+      console.error("Upload non-JSON response:", text.slice(0, 300));
+      throw new Error("Server error — check Next.js terminal");
     }
-    return ((await res.json()) as { url: string }).url;
-  }, [form.section]);
+
+    if (!res.ok) {
+      throw new Error((json.message as string) || `Upload failed (${res.status})`);
+    }
+
+    const url = json.url as string | undefined;
+    if (!url) throw new Error("Upload succeeded but no URL returned");
+
+    return url;
+  }, []);
+
 
   const addFiles = useCallback(async (files: FileList | null) => {
     if (!files) return;
     const toAdd = Array.from(files).slice(0, 5 - images.length);
     if (!toAdd.length) return;
-    const newItems: Img[] = toAdd.map(f => ({ preview: URL.createObjectURL(f), url: "", uploading: true, error: false }));
+
+    // Use the blob preview URL as a stable identity key (avoids stale index closures)
+    const newItems: Img[] = toAdd.map(f => ({
+      preview: URL.createObjectURL(f),
+      url: "",
+      uploading: true,
+      error: false,
+    }));
+
     setImages(prev => [...prev, ...newItems]);
+
     await Promise.all(toAdd.map(async (file, i) => {
-      const idx = images.length + i;
-      try { const url = await uploadFile(file); setImages(prev => prev.map((img, j) => j === idx ? { ...img, url, uploading: false } : img)); }
-      catch { setImages(prev => prev.map((img, j) => j === idx ? { ...img, uploading: false, error: true } : img)); }
+      const previewKey = newItems[i].preview; // stable identity for this file
+      try {
+        const url = await uploadFile(file);
+        setImages(prev => prev.map(img =>
+          img.preview === previewKey ? { ...img, url, uploading: false, error: false } : img
+        ));
+      } catch (err) {
+        console.error("Upload error:", err);
+        setImages(prev => prev.map(img =>
+          img.preview === previewKey ? { ...img, uploading: false, error: true } : img
+        ));
+      }
     }));
   }, [images.length, uploadFile]);
+
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -70,10 +106,30 @@ export default function AddProductPage() {
     setSaving(true);
     try {
       const urls = images.filter(i => i.url).map(i => i.url);
-      const res = await fetch("/api/admin/products", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, description: form.description, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, category: form.category, section: form.section, sizes: form.sizes, colors: form.colors, stockCount: Number(form.stockCount), inStock: form.inStock, images: urls, image: urls[0] ?? "", badge: form.section === "sale" ? "sale" : form.section === "new_arrival" ? "new" : null }) });
-      if (res.ok) { showToast("Product saved!"); setTimeout(() => router.push("/admin/products"), 1200); }
-      else showToast("Failed to save", false);
-    } catch { showToast("An error occurred", false); }
+      // Use /backend/* — same-origin, routes through Node.js to Laravel (SW-safe)
+      const res = await fetch("/backend/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name, description: form.description,
+          price: Number(form.price),
+          originalPrice: form.originalPrice ? Number(form.originalPrice) : null,
+          category: form.category, section: form.section,
+          sizes: form.sizes, colors: form.colors,
+          stockCount: Number(form.stockCount), inStock: form.inStock,
+          images: urls, image: urls[0] ?? "",
+          badge: form.section === "sale" ? "sale" : form.section === "new_arrival" ? "new" : null,
+        }),
+      });
+      const saved = await res.json();
+      if (res.ok && (saved.id || saved._id)) {
+        showToast("Product saved!");
+        setTimeout(() => router.push("/admin/products"), 1200);
+      } else {
+        console.error("Save failed:", saved);
+        showToast(saved.message || "Failed to save", false);
+      }
+    } catch (e) { console.error(e); showToast("An error occurred", false); }
     finally { setSaving(false); }
   };
 
@@ -94,12 +150,36 @@ export default function AddProductPage() {
             {images.length > 0 && (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 12 }}>
                 {images.map((img, i) => (
-                  <div key={i} style={{ position: "relative", aspectRatio: "1", background: "#f5f2ec", overflow: "hidden" }}>
-                    {img.preview && <Image src={img.preview} alt="" fill style={{ objectFit: "cover" }} unoptimized />}
-                    {img.uploading && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}><div style={{ width: 20, height: 20, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /></div>}
-                    {img.error && <div style={{ position: "absolute", inset: 0, background: "rgba(192,57,43,0.8)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "white", fontSize: "11px" }}>Failed</span></div>}
-                    {img.url && !img.uploading && <div style={{ position: "absolute", top: 4, left: 4, width: 16, height: 16, background: "#16a34a", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}><svg width="10" height="10" fill="none" stroke="white" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg></div>}
-                    <button onClick={() => setImages(p => p.filter((_, j) => j !== i))} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, background: "rgba(0,0,0,0.7)", color: "white", border: "none", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                  <div key={img.preview} style={{ position: "relative", aspectRatio: "1", background: "#f5f2ec", overflow: "hidden" }}>
+                    {img.preview && <Image src={img.preview} alt="" fill style={{ objectFit: "cover", zIndex: 0 }} unoptimized />}
+
+                    {/* Uploading spinner */}
+                    {img.uploading && (
+                      <div style={{ position: "absolute", inset: 0, zIndex: 2, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <div style={{ width: 22, height: 22, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                      </div>
+                    )}
+
+                    {/* Failed overlay */}
+                    {img.error && (
+                      <div style={{ position: "absolute", inset: 0, zIndex: 2, background: "rgba(192,57,43,0.85)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                        <span style={{ color: "white", fontSize: "18px" }}>✕</span>
+                        <span style={{ color: "white", fontSize: "10px", letterSpacing: "0.06em" }}>Upload Failed</span>
+                      </div>
+                    )}
+
+                    {/* Success badge */}
+                    {img.url && !img.uploading && !img.error && (
+                      <div style={{ position: "absolute", top: 5, left: 5, zIndex: 2, width: 18, height: 18, background: "#16a34a", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="10" height="10" fill="none" stroke="white" strokeWidth="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" /></svg>
+                      </div>
+                    )}
+
+                    {/* Remove button */}
+                    <button
+                      onClick={() => setImages(p => p.filter(im => im.preview !== img.preview))}
+                      style={{ position: "absolute", top: 4, right: 4, zIndex: 3, width: 22, height: 22, background: "rgba(0,0,0,0.7)", color: "white", border: "none", fontSize: "12px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                    >✕</button>
                   </div>
                 ))}
               </div>
@@ -221,3 +301,4 @@ export default function AddProductPage() {
     </motion.div>
   );
 }
+

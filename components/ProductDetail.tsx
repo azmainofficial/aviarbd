@@ -90,7 +90,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
   useEffect(() => {
     setLoading(true);
     setActiveImage(0);
-    fetch(`/api/products/${encodeURIComponent(slug)}`)
+    fetch(`/backend/products/${encodeURIComponent(slug)}`)
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
@@ -112,7 +112,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
   // Fetch related products (same category)
   useEffect(() => {
     if (!product) return;
-    fetch("/api/products")
+    fetch("/backend/products")
       .then((r) => r.json())
       .then((data: unknown) => {
         if (!Array.isArray(data)) return;
@@ -452,46 +452,62 @@ export default function ProductDetail({ slug }: { slug: string }) {
       {/* Sticky Add-to-Cart Bar */}
       <motion.div
         initial={false}
-        animate={{ y: stickyVisible ? 0 : 80, opacity: stickyVisible ? 1 : 0 }}
+        animate={{ y: stickyVisible ? 0 : 100, opacity: stickyVisible ? 1 : 0 }}
         transition={{ duration: 0.3 }}
         style={{
           position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "rgba(250,250,248,0.97)",
+          bottom: isDesktop ? 0 : 24,
+          left: isDesktop ? 0 : 20,
+          right: isDesktop ? 0 : 20,
+          background: "rgba(250,250,248,0.95)",
           backdropFilter: "blur(12px)",
-          borderTop: "0.5px solid rgba(0,0,0,0.08)",
-          zIndex: 150,
-          padding: "16px 48px",
+          borderTop: isDesktop ? "0.5px solid rgba(0,0,0,0.08)" : "none",
+          border: isDesktop ? "none" : "0.5px solid rgba(0,0,0,0.1)",
+          borderRadius: isDesktop ? 0 : 8,
+          boxShadow: isDesktop ? "none" : "0 8px 32px rgba(0,0,0,0.12)",
+          zIndex: 200,
+          padding: isDesktop ? "16px 48px" : "12px 16px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: "24px",
+          gap: isDesktop ? "24px" : "12px",
           pointerEvents: stickyVisible ? "auto" : "none",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: isDesktop ? "16px" : "12px", minWidth: 0, flex: 1 }}>
           {product.image ? (
-            <div style={{ width: 40, height: 48, position: "relative", flexShrink: 0 }}>
+            <div style={{ width: isDesktop ? 40 : 36, height: isDesktop ? 48 : 44, position: "relative", flexShrink: 0 }}>
               <Image src={product.image} alt={product.name} fill style={{ objectFit: "cover" }} sizes="40px" />
             </div>
           ) : (
-            <div style={{ fontSize: "32px" }}>{product.icon}</div>
+            <div style={{ fontSize: isDesktop ? "32px" : "28px", flexShrink: 0 }}>{product.icon}</div>
           )}
-          <div>
-            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "18px", color: "#0a0a0a" }}>{product.name}</div>
-            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "20px", color: "#c9a96e" }}>${product.price}</div>
+          <div style={{ minWidth: 0, overflow: "hidden" }}>
+            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "18px" : "16px", color: "#0a0a0a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>
+            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "20px" : "16px", color: "#c9a96e" }}>${product.price}</div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <span style={{ fontSize: "12px", color: "#8a8680" }}>
-            {selectedSize ? `Size: ${selectedSize}` : "Select a size above"}
-          </span>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center", flexShrink: 0 }}>
+          {isDesktop && (
+            <span style={{ fontSize: "12px", color: "#8a8680" }}>
+              {selectedSize ? `Size: ${selectedSize}` : "Select a size above"}
+            </span>
+          )}
           <button
             onClick={handleAddToCart}
             disabled={isOutOfStock}
-            style={{ background: isOutOfStock ? "#ccc" : "#0a0a0a", color: "#fafaf8", border: "none", padding: "14px 40px", fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", cursor: isOutOfStock ? "not-allowed" : "pointer" }}
+            style={{ 
+              background: isOutOfStock ? "#ccc" : "#0a0a0a", 
+              color: "#fafaf8", 
+              border: "none", 
+              padding: isDesktop ? "14px 40px" : "12px 24px", 
+              fontSize: "12px", 
+              letterSpacing: "0.12em", 
+              textTransform: "uppercase", 
+              cursor: isOutOfStock ? "not-allowed" : "pointer",
+              whiteSpace: "nowrap",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+            }}
           >
             {isOutOfStock ? "Out of Stock" : "Add to Cart"}
           </button>

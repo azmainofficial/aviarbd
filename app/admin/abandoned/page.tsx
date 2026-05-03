@@ -33,6 +33,24 @@ const SOURCE_CFG = {
   "buy-now": { label: "Buy Now",   color: "#5b21b6", bg: "#ede9fe" },
 };
 
+function mapApiAbandoned(p: any): AbandonedRecord {
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    customer: {
+      name: p.customer_name ?? p.customer?.name,
+      email: p.customer_email ?? p.customer?.email ?? "",
+      city: p.customer_city ?? p.customer?.city,
+      country: p.customer_country ?? p.customer?.country,
+    },
+    items: Array.isArray(p.items) ? p.items : (typeof p.items === 'string' ? JSON.parse(p.items) : []),
+    total: Number(p.total ?? 0),
+    source: p.source ?? "checkout",
+    status: p.status ?? "abandoned",
+    createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+    updatedAt: p.updated_at ?? p.updatedAt ?? new Date().toISOString(),
+  };
+}
+
 export default function AbandonedPage() {
   const [records, setRecords] = useState<AbandonedRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,9 +66,9 @@ export default function AbandonedPage() {
   };
 
   useEffect(() => {
-    fetch("/api/admin/abandoned")
+    fetch("/backend/admin/abandoned")
       .then((r) => r.json())
-      .then((d: AbandonedRecord[]) => { if (Array.isArray(d)) setRecords(d); })
+      .then((d: any[]) => { if (Array.isArray(d)) setRecords(d.map(mapApiAbandoned)); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -78,7 +96,7 @@ export default function AbandonedPage() {
   const handleStatus = async (id: string, status: string) => {
     setActionLoading(id + status);
     try {
-      const res = await fetch(`/api/admin/abandoned/${id}`, {
+      const res = await fetch(`/backend/admin/abandoned/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -95,7 +113,7 @@ export default function AbandonedPage() {
     if (!confirm("Delete this record? This cannot be undone.")) return;
     setActionLoading(id + "del");
     try {
-      const res = await fetch(`/api/admin/abandoned/${id}`, { method: "DELETE" });
+      const res = await fetch(`/backend/admin/abandoned/${id}`, { method: "DELETE" });
       if (res.ok) {
         setRecords((prev) => prev.filter((r) => r._id !== id));
         if (selected?._id === id) setSelected(null);

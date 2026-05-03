@@ -3,8 +3,6 @@ import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductDetail from "@/components/ProductDetail";
-import { connectDB } from "@/lib/mongodb";
-import Product from "@/models/Product";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -13,10 +11,11 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
-    await connectDB();
-    const product = await Product.findOne({ slug }).lean();
-    if (product) {
-      const images = Array.isArray(product.images) ? product.images : [];
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+    const res = await fetch(`${apiUrl}/products/${encodeURIComponent(slug)}`, { next: { revalidate: 60 } });
+    if (res.ok) {
+      const product = await res.json();
+      const images = Array.isArray(product.images) ? product.images : (product.image ? [product.image] : []);
       return {
         title: `${product.name} — AVIAR Premium Collection`,
         description: product.description

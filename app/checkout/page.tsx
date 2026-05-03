@@ -1,28 +1,11 @@
 "use client";
 import { useState, useEffect, type ChangeEvent, type SyntheticEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import { useAbandonedSave } from "@/lib/useAbandonedSave";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
-
-const CARD_ELEMENT_OPTIONS = {
-  style: {
-    base: {
-      fontSize: "14px",
-      fontFamily: "DM Sans, sans-serif",
-      color: "#0a0a0a",
-      "::placeholder": { color: "#8a8680" },
-      iconColor: "#c9a96e",
-    },
-    invalid: { color: "#c0392b", iconColor: "#c0392b" },
-  },
-};
 
 // Supported coupon codes
 const COUPONS: Record<string, { type: "percent" | "fixed" | "shipping"; value: number; label: string }> = {
@@ -31,15 +14,13 @@ const COUPONS: Record<string, { type: "percent" | "fixed" | "shipping"; value: n
   FREESHIP: { type: "shipping", value: 0, label: "Free shipping" },
 };
 
-type PaymentMethod = "card" | "cod";
+type PaymentMethod = "cod";
 
 function CheckoutForm() {
-  const stripe = useStripe();
-  const elements = useElements();
   const { cart, cartTotal, clearCart } = useCart();
   const router = useRouter();
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "",
     address: "", city: "", country: "", zip: "",
@@ -112,7 +93,7 @@ function CheckoutForm() {
 
     try {
       if (paymentMethod === "cod") {
-        const res = await fetch("/api/orders", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/orders`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -128,50 +109,6 @@ function CheckoutForm() {
         clearCart();
         router.push(`/order/confirmation?order=${encodeURIComponent(data.orderNumber ?? "")}`);
         return;
-      }
-
-      const res = await fetch("/api/create-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: total }),
-      });
-      const { clientSecret, error: serverError } = await res.json() as { clientSecret?: string; error?: string };
-      if (serverError) { setError(serverError); setLoading(false); return; }
-
-      if (!stripe || !elements) { setError("Stripe not loaded"); setLoading(false); return; }
-
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) { setError("Card element not found"); setLoading(false); return; }
-
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret!, {
-        payment_method: {
-          card: cardElement,
-          billing_details: { name: `${form.firstName} ${form.lastName}`, email: form.email },
-        },
-      });
-
-      if (stripeError) {
-        setError(stripeError.message || "Payment failed");
-        setLoading(false);
-        return;
-      }
-
-      if (paymentIntent?.status === "succeeded") {
-        const orderRes = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customer: { firstName: form.firstName, lastName: form.lastName, name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
-            items: cart,
-            total,
-            paymentMethod: "Card",
-            paymentIntentId: paymentIntent.id,
-            status: "paid",
-          }),
-        });
-        const orderData = await orderRes.json() as { orderNumber?: string };
-        clearCart();
-        router.push(`/order/confirmation?order=${encodeURIComponent(orderData.orderNumber ?? "")}`);
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -229,33 +166,20 @@ function CheckoutForm() {
             <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Payment Method</div>
 
             <div style={{ display: "flex", gap: "0", marginBottom: "24px", border: "0.5px solid rgba(0,0,0,0.15)" }}>
-              {([["card", "💳 Credit / Debit Card"], ["cod", "🚚 Cash on Delivery"]] as [PaymentMethod, string][]).map(([key, label]) => (
-                <button key={key} type="button" onClick={() => setPaymentMethod(key)}
-                  style={{ flex: 1, padding: "14px", fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", background: paymentMethod === key ? "#0a0a0a" : "none", color: paymentMethod === key ? "#fafaf8" : "#8a8680", border: "none", cursor: "pointer", transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
-                  {label}
-                </button>
-              ))}
+              <button type="button" onClick={() => setPaymentMethod("cod")}
+                style={{ flex: 1, padding: "14px", fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", background: "#0a0a0a", color: "#fafaf8", border: "none", cursor: "pointer", transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
+                🚚 Cash on Delivery
+              </button>
             </div>
 
             <AnimatePresence mode="wait">
-              {paymentMethod === "card" ? (
-                <motion.div key="card" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-                  <div style={{ padding: "16px", border: "0.5px solid rgba(0,0,0,0.15)", background: "#fafaf8" }}>
-                    <CardElement options={CARD_ELEMENT_OPTIONS} />
-                  </div>
-                  <p style={{ fontSize: "11px", color: "#8a8680", marginTop: "8px" }}>
-                    🔒 Your card details are encrypted and processed securely by Stripe
-                  </p>
-                </motion.div>
-              ) : (
-                <motion.div key="cod" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
-                  style={{ padding: "20px", background: "#f5f2ec", border: "0.5px solid rgba(201,169,110,0.3)" }}>
-                  <div style={{ fontSize: "13px", color: "#3a3835", lineHeight: 1.8 }}>
-                    🚚 Pay in cash when your order is delivered.<br />
-                    Our delivery agent will collect payment at your doorstep.
-                  </div>
-                </motion.div>
-              )}
+              <motion.div key="cod" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}
+                style={{ padding: "20px", background: "#f5f2ec", border: "0.5px solid rgba(201,169,110,0.3)" }}>
+                <div style={{ fontSize: "13px", color: "#3a3835", lineHeight: 1.8 }}>
+                  🚚 Pay in cash when your order is delivered.<br />
+                  Our delivery agent will collect payment at your doorstep.
+                </div>
+              </motion.div>
             </AnimatePresence>
           </div>
 
@@ -378,11 +302,10 @@ export default function CheckoutPage() {
       <Navbar />
       <div style={{ height: "72px", background: "#0a0a0a" }} />
       <div style={{ minHeight: "100vh", background: "#fafaf8" }}>
-        <Elements stripe={stripePromise}>
-          <CheckoutForm />
-        </Elements>
+        <CheckoutForm />
       </div>
       <Footer />
     </main>
   );
 }
+

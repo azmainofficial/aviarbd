@@ -83,8 +83,12 @@ export default function CartSidebar() {
                       className="relative flex items-center gap-4 md:gap-6 p-5 md:p-[24px_32px] border-b-[0.5px] border-[rgba(0,0,0,0.06)]"
                     >
                       {/* Image Placeholder */}
-                      <div className="w-[72px] h-[72px] shrink-0 bg-cream flex items-center justify-center text-[28px]">
-                        {item.image}
+                      <div className="w-[72px] h-[72px] shrink-0 bg-[#f5f2ec] flex items-center justify-center text-[28px] overflow-hidden">
+                        {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        ) : (
+                          item.image ?? "🛍️"
+                        )}
                       </div>
 
                       {/* Info */}

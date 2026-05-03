@@ -1,198 +1,412 @@
 // components/Hero.tsx
 "use client";
-import { useRef, useState, useEffect, useMemo } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
 
-type BgProduct = { image: string; name: string; price: number };
+/* ─── Slide type ─────────────────────────────────────────────────── */
+type Slide = {
+  image: string;
+  label: string;
+  headline: string;
+  sub: string;
+  cta: string;
+  href: string;
+  accent: string; // text accent colour per slide
+};
 
-const FALLBACK_PRODUCTS: BgProduct[] = [
-  { image: "/images/products/silk-wrap-blouse.png", name: "Silk Wrap Blouse", price: 295 },
-  { image: "/images/products/cashmere-turtleneck.png", name: "Cashmere Turtleneck", price: 450 },
-  { image: "/images/products/leather-crossbody-bag.png", name: "Leather Crossbody", price: 320 },
-  { image: "/images/products/tailored-trousers.png", name: "Tailored Trousers", price: 250 },
-  { image: "/images/products/woven-sun-hat.png", name: "Woven Sun Hat", price: 95 },
+/* ─── Static fallback slides (used when no DB images exist) ─────── */
+const STATIC_SLIDES: Slide[] = [
+  {
+    image: "/images/products/silk-wrap-blouse.png",
+    label: "New Arrival",
+    headline: "Wear the\nDifference",
+    sub: "Premium silk craftsmanship for those who demand excellence",
+    cta: "Shop Now",
+    href: "/shop",
+    accent: "#c9a96e",
+  },
+  {
+    image: "/images/products/cashmere-turtleneck.png",
+    label: "SS 2025 Collection",
+    headline: "Define\nYour Style",
+    sub: "Pure cashmere comfort — effortless luxury for every season",
+    cta: "Explore",
+    href: "/shop?filter=new",
+    accent: "#e8d5b0",
+  },
+  {
+    image: "/images/products/leather-crossbody-bag.png",
+    label: "Accessories",
+    headline: "Carry\nConfidence",
+    sub: "Handcrafted leather goods built to last a lifetime",
+    cta: "View Collection",
+    href: "/shop?category=accessories",
+    accent: "#d4a56a",
+  },
 ];
 
+const AUTOPLAY_MS = 6000;
+
+/* ─── Slide direction variants ───────────────────────────────────── */
+const imageVariants = {
+  enter: (dir: number) => ({
+    x: dir > 0 ? "100%" : "-100%",
+    scale: 1.05,
+    opacity: 0,
+  }),
+  center: { x: 0, scale: 1, opacity: 1 },
+  exit: (dir: number) => ({
+    x: dir > 0 ? "-100%" : "100%",
+    scale: 0.97,
+    opacity: 0,
+  }),
+};
+
+const textVariants = {
+  enter: (dir: number) => ({ y: dir > 0 ? 40 : -40, opacity: 0 }),
+  center: { y: 0, opacity: 1 },
+  exit: (dir: number) => ({ y: dir > 0 ? -40 : 40, opacity: 0 }),
+};
+
 export default function Hero() {
-  const containerRef = useRef<HTMLElement>(null);
-  const [dbProducts, setDbProducts] = useState<BgProduct[]>([]);
-  const [currentProduct, setCurrentProduct] = useState(0);
-  const [isDesktop, setIsDesktop] = useState(true);
-  const [loading, setLoading] = useState(true);
+  const [slides, setSlides] = useState<Slide[]>(STATIC_SLIDES);
+  const [index, setIndex] = useState(0);
+  const [dir, setDir] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const displayProducts = useMemo(() => {
-    return dbProducts.length > 0 ? dbProducts : FALLBACK_PRODUCTS;
-  }, [dbProducts]);
+  // Drag / swipe state
+  const dragStartX = useRef(0);
 
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end start"],
-  });
-
-  const opacity = useTransform(scrollYProgress, [0, 0.4], [1, 0]);
-  const y = useTransform(scrollYProgress, [0, 0.4], [0, -50]);
-
-  // Fetch real products
+  /* ── Fetch custom slides from Laravel API ── */
   useEffect(() => {
-    let cancelled = false;
-    fetch("/api/products")
+    fetch("/backend/hero-slides")
       .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        if (Array.isArray(data) && data.length > 0) {
-          const mapped = data
-            .filter((p: any) => (p.images && p.images.length > 0) || p.image)
-            .map((p: any) => ({
-              image: p.images?.[0] || p.image,
-              name: p.name,
-              price: p.price,
-            }));
-          if (mapped.length > 0) setDbProducts(mapped);
-        }
+      .then((data: Record<string, unknown>[]) => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const mapped: Slide[] = data.map((p) => ({
+          image: String(p.image ?? ""),
+          label: String(p.label ?? "Collection"),
+          headline: String(p.headline ?? ""),
+          sub: String(p.sub ?? ""),
+          cta: String(p.cta ?? "Shop Now"),
+          href: String(p.href ?? "/shop"),
+          accent: String(p.accent ?? "#c9a96e"),
+        }));
+        if (mapped.length > 0) setSlides(mapped);
       })
-      .catch((err) => console.error("Hero fetch error:", err))
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
+      .catch(() => {/* keep static slides */});
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentProduct((prev) => (prev + 1) % displayProducts.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [displayProducts.length]);
+  /* ── Progress bar & autoplay ── */
+  const resetProgress = useCallback(() => {
+    setProgress(0);
+    if (progressRef.current) clearInterval(progressRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    progressRef.current = setInterval(() => {
+      setProgress((p) => Math.min(p + 100 / (AUTOPLAY_MS / 50), 100));
+    }, 50);
+
+    intervalRef.current = setInterval(() => {
+      if (!paused) {
+        setDir(1);
+        setIndex((i) => (i + 1) % slides.length);
+        setProgress(0);
+      }
+    }, AUTOPLAY_MS);
+  }, [slides.length, paused]);
 
   useEffect(() => {
-    const update = () => setIsDesktop(window.innerWidth >= 768);
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
+    resetProgress();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (progressRef.current) clearInterval(progressRef.current);
+    };
+  }, [index, paused, resetProgress]);
+
+  const go = useCallback((next: number) => {
+    setDir(next > index ? 1 : -1);
+    setIndex(next);
+    setProgress(0);
+  }, [index]);
+
+  const prev = () => go((index - 1 + slides.length) % slides.length);
+  const next = () => go((index + 1) % slides.length);
+
+  const slide = slides[index];
 
   return (
-    <section ref={containerRef} style={{ position: "relative", height: isDesktop ? "150vh" : "100vh", width: "100%" }}>
-      <div style={{ height: "100vh", position: "sticky", top: 0, overflow: "hidden", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "linear-gradient(160deg, #0a0a0a 0%, #1c1a17 50%, #2a2520 100%)" }}>
+    <section
+      style={{ position: "relative", width: "100%", height: "100vh", overflow: "hidden", background: "#0a0a0a" }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onTouchStart={(e) => { dragStartX.current = e.touches[0].clientX; }}
+      onTouchEnd={(e) => {
+        const dx = dragStartX.current - e.changedTouches[0].clientX;
+        if (Math.abs(dx) > 50) dx > 0 ? next() : prev();
+      }}
+    >
+      {/* ── Full-bleed image layer ─────────────────────────────────── */}
+      <AnimatePresence custom={dir} initial={false}>
+        <motion.div
+          key={`img-${index}`}
+          custom={dir}
+          variants={imageVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.9, ease: [0.77, 0, 0.18, 1] }}
+          style={{ position: "absolute", inset: 0 }}
+        >
+          <Image
+            src={slide.image}
+            alt={slide.headline}
+            fill
+            priority
+            sizes="100vw"
+            style={{ objectFit: "cover", objectPosition: "center top" }}
+          />
+          {/* Cinematic dark gradient overlay */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(105deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.15) 100%)",
+          }} />
+          {/* Bottom fade for nav readability */}
+          <div style={{
+            position: "absolute", bottom: 0, left: 0, right: 0, height: "180px",
+            background: "linear-gradient(to top, rgba(0,0,0,0.6), transparent)",
+          }} />
+        </motion.div>
+      </AnimatePresence>
 
-        {/* Background Product Slideshow */}
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-          <AnimatePresence mode="wait">
+      {/* ── Text content ──────────────────────────────────────────── */}
+      <div style={{
+        position: "absolute", inset: 0, zIndex: 10,
+        display: "flex", flexDirection: "column", justifyContent: "center",
+        padding: "clamp(24px,6vw,100px)",
+        paddingTop: "clamp(80px,12vh,140px)",
+      }}>
+        <AnimatePresence custom={dir} initial={false} mode="wait">
+          <motion.div
+            key={`text-${index}`}
+            custom={dir}
+            variants={textVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {/* Label pill */}
             <motion.div
-              key={currentProduct + (loading ? "loading" : "ready")}
-              initial={{ opacity: 0, scale: 0.9, filter: "grayscale(100%) brightness(0)" }}
-              animate={{ opacity: 0.1, scale: 1, filter: "grayscale(100%) brightness(1.2)" }}
-              exit={{ opacity: 0, scale: 1.05, filter: "grayscale(100%) brightness(0.5)" }}
-              transition={{ duration: 2, ease: "easeInOut" }}
-              style={{ width: "min(800px, 80vw)", height: "min(800px, 80vh)", position: "absolute", display: "flex", alignItems: "center", justifyContent: "center" }}
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.15, duration: 0.4 }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                marginBottom: "clamp(16px,2.5vh,28px)",
+              }}
             >
-              <Image
-                src={displayProducts[currentProduct].image}
-                alt={displayProducts[currentProduct].name}
-                fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 800px"
-                style={{ objectFit: "contain", userSelect: "none" }}
-                priority
-              />
+              <span style={{ width: "28px", height: "1px", background: slide.accent, display: "inline-block" }} />
+              <span style={{
+                fontSize: "10px", letterSpacing: "0.28em", textTransform: "uppercase",
+                color: slide.accent, fontFamily: "DM Sans, sans-serif",
+              }}>
+                {slide.label}
+              </span>
             </motion.div>
-          </AnimatePresence>
-        </div>
 
-        {/* Product indicator dots */}
-        <div style={{ position: "absolute", bottom: "60px", left: "50%", transform: "translateX(-50%)", display: "flex", gap: "8px", zIndex: 10 }}>
-          {displayProducts.map((_, i) => (
+            {/* Main headline */}
+            <h1 style={{
+              fontFamily: "Cormorant Garamond, serif",
+              fontWeight: 300,
+              fontSize: "clamp(52px, 9vw, 120px)",
+              lineHeight: 0.92,
+              color: "#fafaf8",
+              marginBottom: "clamp(16px,2.5vh,28px)",
+              whiteSpace: "pre-line",
+              letterSpacing: "-0.01em",
+            }}>
+              {slide.headline.split("\n").map((line, i) =>
+                i === 1
+                  ? <em key={i} style={{ color: slide.accent, fontStyle: "italic" }}>{line}</em>
+                  : <span key={i}>{line}<br /></span>
+              )}
+            </h1>
+
+            {/* Subtitle */}
+            <p style={{
+              fontSize: "clamp(13px,1.2vw,16px)",
+              color: "rgba(255,255,255,0.55)",
+              fontFamily: "DM Sans, sans-serif",
+              fontWeight: 300,
+              maxWidth: "420px",
+              lineHeight: 1.7,
+              marginBottom: "clamp(28px,4vh,44px)",
+            }}>
+              {slide.sub}
+            </p>
+
+            {/* CTAs */}
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+              <Link
+                href={slide.href}
+                style={{
+                  background: slide.accent,
+                  color: "#0a0a0a",
+                  padding: "15px 36px",
+                  fontSize: "11px",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  fontFamily: "DM Sans, sans-serif",
+                  fontWeight: 600,
+                  display: "inline-block",
+                  transition: "opacity 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.85")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                {slide.cta}
+              </Link>
+              <Link
+                href="/shop"
+                style={{
+                  color: "rgba(255,255,255,0.75)",
+                  fontSize: "11px",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  textDecoration: "none",
+                  fontFamily: "DM Sans, sans-serif",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  transition: "color 0.2s",
+                  paddingLeft: "4px",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255,255,255,0.75)")}
+              >
+                View All <span style={{ fontSize: "16px" }}>→</span>
+              </Link>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* ── Slide Controls (Bottom Left) ───────────────────────── */}
+      <div style={{
+        position: "absolute", bottom: "clamp(24px,4vh,48px)",
+        left: "clamp(20px,4vw,60px)",
+        zIndex: 20,
+        display: "flex", alignItems: "center", gap: "40px",
+        flexWrap: "wrap"
+      }}>
+        {/* Dot indicators */}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {slides.map((_, i) => (
             <button
               key={i}
-              onClick={() => setCurrentProduct(i)}
-              style={{ width: i === currentProduct ? "24px" : "6px", height: "6px", borderRadius: "3px", background: i === currentProduct ? "#c9a96e" : "rgba(255,255,255,0.3)", border: "none", cursor: "pointer", transition: "all 0.3s ease", padding: 0 }}
-            />
+              onClick={() => go(i)}
+              aria-label={`Go to slide ${i + 1}`}
+              style={{
+                padding: 0, width: i === index ? "32px" : "8px", height: "3px", border: "none",
+                background: i === index ? slide.accent : "rgba(255,255,255,0.25)",
+                transition: "width 0.4s ease, background 0.3s ease",
+                cursor: "pointer", overflow: "hidden", position: "relative",
+              }}
+            >
+              {i === index && <span style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.35)", width: `${progress}%`, transition: "width 50ms linear" }} />}
+            </button>
           ))}
         </div>
 
-        {/* Decorative Circles */}
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", pointerEvents: "none" }}>
-          <div style={{ width: "min(560px, 90vw)", height: "min(560px, 90vw)", borderRadius: "50%", border: "0.5px solid rgba(201,169,110,0.15)", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", animation: "rotateCW 30s linear infinite" }} />
-          <div style={{ width: "min(380px, 62vw)", height: "min(380px, 62vw)", borderRadius: "50%", border: "0.5px solid rgba(201,169,110,0.1)", position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", animation: "rotateCCW 20s linear infinite" }} />
-        </div>
+        {/* Counter & arrows */}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+        {/* Counter */}
+        <span style={{
+          fontSize: "11px", letterSpacing: "0.15em",
+          color: "rgba(255,255,255,0.45)",
+          fontFamily: "DM Sans, sans-serif",
+          minWidth: "36px",
+        }}>
+          {String(index + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
+        </span>
 
-        {/* Main Content */}
-        <motion.div style={{ opacity, y, position: "relative", zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "0 24px", width: "100%" }}>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            style={{ color: "#c9a96e", fontSize: "11px", letterSpacing: "0.25em", textTransform: "uppercase", marginBottom: "24px" }}
-          >
-            New Collection 2025
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            style={{ fontFamily: "Cormorant Garamond, serif", fontWeight: 300, color: "#fafaf8", lineHeight: 1, marginBottom: "20px", fontSize: "clamp(52px,8vw,100px)" }}
-          >
-            Wear the
-            <br />
-            <em style={{ color: "#e8d5b0" }}>Difference</em>
-          </motion.h1>
-
-          {/* Current product name */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentProduct + (loading ? "loading-text" : "ready-text")}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.4 }}
-              style={{ fontSize: "12px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.4)", marginBottom: "16px" }}
-            >
-              {displayProducts[currentProduct].name} — ${displayProducts[currentProduct].price}
-            </motion.div>
-          </AnimatePresence>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
-            style={{ fontSize: "14px", fontWeight: 300, color: "rgba(255,255,255,0.5)", marginBottom: "40px", maxWidth: "400px" }}
-          >
-            Premium clothing crafted for those who demand excellence
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.9, duration: 0.5 }}
-            style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}
-          >
-            <Link href="/shop" style={{ background: "#c9a96e", color: "#0a0a0a", padding: "14px 32px", fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none", display: "inline-block", minWidth: isDesktop ? "160px" : "140px", textAlign: "center" }}>
-              Shop Collection
-            </Link>
-            <Link href="/about" style={{ background: "transparent", border: "0.5px solid rgba(255,255,255,0.3)", color: "rgba(255,255,255,0.7)", padding: "14px 32px", fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", textDecoration: "none", display: "inline-block", minWidth: isDesktop ? "160px" : "140px", textAlign: "center" }}>
-              Our Story
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        {/* Scroll Indicator */}
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ delay: 1.4, duration: 0.6 }}
-          style={{ position: "absolute", bottom: "40px", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", zIndex: 10 }}
+        {/* Prev */}
+        <button
+          onClick={prev}
+          aria-label="Previous slide"
+          style={{
+            width: "44px", height: "44px",
+            border: "0.5px solid rgba(255,255,255,0.25)",
+            background: "rgba(255,255,255,0.06)",
+            backdropFilter: "blur(8px)",
+            color: "#fff",
+            fontSize: "18px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
         >
-          <span style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>Scroll</span>
+          ←
+        </button>
+
+        {/* Next */}
+        <button
+          onClick={next}
+          aria-label="Next slide"
+          style={{
+            width: "44px", height: "44px",
+            border: "0.5px solid rgba(255,255,255,0.25)",
+            background: "rgba(255,255,255,0.06)",
+            backdropFilter: "blur(8px)",
+            color: "#fff",
+            fontSize: "18px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer",
+            transition: "background 0.2s, border-color 0.2s",
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.15)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.5)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.06)"; e.currentTarget.style.borderColor = "rgba(255,255,255,0.25)"; }}
+        >
+          →
+        </button>
+      </div>
+    </div>
+
+    {/* ── Scroll hint ───────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.8 }}
+        style={{
+          position: "absolute",
+          bottom: "clamp(24px,4vh,52px)",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 20,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: "6px",
+        }}
+      >
+        <motion.div
+          animate={{ y: [0, 6, 0] }}
+          transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+          style={{ width: "20px", height: "32px", border: "1px solid rgba(255,255,255,0.25)", borderRadius: "10px", display: "flex", justifyContent: "center", paddingTop: "5px" }}
+        >
           <motion.div
-            animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-            style={{ width: "1px", height: "40px", background: "linear-gradient(to bottom, #c9a96e, transparent)" }}
+            animate={{ opacity: [1, 0], y: [0, 10] }}
+            transition={{ repeat: Infinity, duration: 1.8 }}
+            style={{ width: "3px", height: "6px", borderRadius: "2px", background: "rgba(255,255,255,0.5)" }}
           />
         </motion.div>
-      </div>
-
-      <style jsx>{`
-        @keyframes rotateCW { to { transform: translate(-50%, -50%) rotate(360deg); } }
-        @keyframes rotateCCW { to { transform: translate(-50%, -50%) rotate(-360deg); } }
-      `}</style>
+      </motion.div>
     </section>
   );
 }

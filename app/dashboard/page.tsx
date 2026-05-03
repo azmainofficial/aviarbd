@@ -65,7 +65,7 @@ export default function DashboardPage() {
     setSavedOrder(info);
     setOrderLoading(true);
 
-    fetch(`/api/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`)
+    fetch(`/backend/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`)
       .then((r) => r.ok ? r.json() : null)
       .then((data) => { if (data?.order) setLatestOrder(data.order); })
       .catch(() => {})
@@ -258,8 +258,12 @@ export default function DashboardPage() {
                       display: "flex", gap: 14, padding: isDesktop ? "16px 28px" : "14px 20px",
                       borderBottom: "0.5px solid rgba(0,0,0,0.04)", alignItems: "center",
                     }}>
-                      <div style={{ width: 52, height: 52, background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0 }}>
-                        {item.image}
+                      <div style={{ width: 52, height: 52, background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, flexShrink: 0, overflow: "hidden" }}>
+                        {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
+                          <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        ) : (
+                          item.image ?? "🛍️"
+                        )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 16, color: "#0a0a0a" }}>{item.name}</div>

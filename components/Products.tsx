@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import ProductCard, { Product } from "./ProductCard";
 import { useCart } from "@/context/CartContext";
+import { fetchAPI } from "@/lib/api";
 
 const SAMPLE_PRODUCTS: Product[] = [
   { id: "1", name: "Silk Wrap Blouse", price: 295, icon: "👚", category: "Clothing", badge: "new", slug: "silk-wrap-blouse" },
@@ -50,6 +51,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [showSaleOnly, setShowSaleOnly] = useState(initialFilter === "sale");
   const [cols, setCols] = useState(4);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // JS-based responsive columns (works reliably with Turbopack)
   useEffect(() => {
@@ -86,7 +88,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
   // Fetch from MongoDB, fall back to sample data
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/products")
+    fetchAPI("/products")
       .then((r) => r.json())
       .then((data: unknown) => {
         if (cancelled) return;
@@ -157,7 +159,15 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
     }
   }, [products, activeTab, sort, priceRange, showSaleOnly]);
 
-  const skeletonCount = shopMode ? 8 : 8;
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, sort, priceRange, showSaleOnly]);
+
+  const itemsPerPage = shopMode ? 8 : 8;
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedProducts = shopMode ? filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage) : filtered.slice(0, 8);
+
+  const skeletonCount = shopMode ? itemsPerPage : 8;
 
   return (
     <section
@@ -165,8 +175,8 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
         background: "#f5f2ec",
         position: "relative",
         width: "100%",
+        padding: cols <= 2 ? (shopMode ? "40px 20px" : "44px 20px") : (shopMode ? "60px max(20px, 5vw)" : "80px max(20px, 5vw)"),
       }}
-      className={shopMode ? "py-[40px] md:py-[60px] px-5 md:px-12" : "py-[44px] md:py-[80px] px-5 md:px-12"}
     >
       <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
 
@@ -212,9 +222,10 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
                   textTransform: "uppercase",
                   color: activeTab === tab ? "#0a0a0a" : "#8a8680",
                   borderBottom: activeTab === tab ? "1.5px solid #0a0a0a" : "1.5px solid transparent",
-                  marginBottom: "-17px",
+                  marginBottom: cols <= 2 ? "0px" : "-17px",
                   transition: "color 0.2s",
                   fontFamily: "DM Sans, sans-serif",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {tab}
@@ -302,7 +313,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
             ? Array.from({ length: skeletonCount }).map((_, i) => (
               <ProductSkeleton key={i} />
             ))
-            : filtered.length === 0
+            : paginatedProducts.length === 0
               ? (
                 <div style={{ gridColumn: "1/-1", textAlign: "center", padding: "80px 0", color: "#8a8680" }}>
                   <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
@@ -310,7 +321,7 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
                   <p style={{ fontSize: "13px" }}>Try adjusting your filters</p>
                 </div>
               )
-              : filtered.map((product, idx) => (
+              : paginatedProducts.map((product, idx) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -319,6 +330,47 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
                 />
               ))}
         </div>
+
+        {/* Pagination */}
+        {shopMode && totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginTop: "48px", gap: "16px" }}>
+            <button
+              onClick={() => {
+                setCurrentPage(p => Math.max(1, p - 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              disabled={currentPage === 1}
+              style={{
+                padding: "10px 20px", border: "0.5px solid rgba(0,0,0,0.15)", background: "none",
+                cursor: currentPage === 1 ? "not-allowed" : "pointer", opacity: currentPage === 1 ? 0.3 : 1,
+                fontFamily: "DM Sans, sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => { if (currentPage > 1) { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.color = "#fafaf8"; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#0a0a0a"; }}
+            >
+              Prev
+            </button>
+            <span style={{ fontSize: "12px", color: "#8a8680", fontFamily: "DM Sans, sans-serif", letterSpacing: "0.08em" }}>
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => {
+                setCurrentPage(p => Math.min(totalPages, p + 1));
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+              disabled={currentPage === totalPages}
+              style={{
+                padding: "10px 20px", border: "0.5px solid rgba(0,0,0,0.15)", background: "none",
+                cursor: currentPage === totalPages ? "not-allowed" : "pointer", opacity: currentPage === totalPages ? 0.3 : 1,
+                fontFamily: "DM Sans, sans-serif", fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", transition: "all 0.2s"
+              }}
+              onMouseEnter={(e) => { if (currentPage < totalPages) { e.currentTarget.style.background = "#0a0a0a"; e.currentTarget.style.color = "#fafaf8"; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "#0a0a0a"; }}
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Toast */}

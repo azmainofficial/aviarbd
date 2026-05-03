@@ -62,12 +62,11 @@ export default function Navbar() {
   return (
     <>
       <nav
-        style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "64px", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.4s ease", padding: "0 24px", ...bgStyle }}
-        className="md:px-12"
+        style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "64px", zIndex: 100, display: "flex", alignItems: "center", justifyContent: "space-between", transition: "all 0.4s ease", padding: isDesktop ? "0 max(24px, 5vw)" : "0 20px", ...bgStyle }}
       >
         {/* Logo */}
         <Link href="/" style={{ textDecoration: "none", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ position: "relative", width: "96px", height: "28px" }} className="md:w-[120px] md:h-[32px]">
+          <div style={{ position: "relative", width: isDesktop ? "120px" : "96px", height: isDesktop ? "32px" : "28px" }}>
             <Image
               src="/lg.png"
               alt="AVIAR Logo"

@@ -5,7 +5,7 @@ import type { OrderStatus } from "@/lib/types";
 
 interface OrderItem { name?: string; price?: number; qty?: number; size?: string; color?: string; image?: string; }
 interface Order {
-  _id: string; orderNumber: string;
+  _id?: string; id?: number | string; orderNumber: string;
   customer: { name?: string; firstName?: string; lastName?: string; email?: string; address?: string; city?: string; country?: string; zip?: string };
   items: OrderItem[]; total: number; status: OrderStatus; paymentMethod?: string; createdAt: string;
 }
@@ -15,10 +15,47 @@ const S: Record<string, { label: string; color: string; bg: string }> = {
   pending:    { label: "Pending",    color: "#92400e", bg: "#fef3c7" },
   paid:       { label: "Paid",       color: "#1e40af", bg: "#dbeafe" },
   Processing: { label: "Processing", color: "#b45309", bg: "#fef3c7" },
+  processing: { label: "Processing", color: "#b45309", bg: "#fef3c7" },
   Shipped:    { label: "Shipped",    color: "#1e40af", bg: "#dbeafe" },
+  shipped:    { label: "Shipped",    color: "#1e40af", bg: "#dbeafe" },
   Delivered:  { label: "Delivered",  color: "#065f46", bg: "#d1fae5" },
+  delivered:  { label: "Delivered",  color: "#065f46", bg: "#d1fae5" },
   Cancelled:  { label: "Cancelled",  color: "#991b1b", bg: "#fee2e2" },
+  cancelled:  { label: "Cancelled",  color: "#991b1b", bg: "#fee2e2" },
 };
+
+const UNIQUE_FILTERS = [
+  { val: "all", label: "All" },
+  { val: "pending", label: "Pending" },
+  { val: "paid", label: "Paid" },
+  { val: "processing", label: "Processing" },
+  { val: "shipped", label: "Shipped" },
+  { val: "delivered", label: "Delivered" },
+  { val: "cancelled", label: "Cancelled" },
+];
+
+function mapApiOrder(p: any): Order {
+  return {
+    _id: String(p.id ?? p._id ?? ""),
+    id: p.id,
+    orderNumber: String(p.order_number ?? p.orderNumber ?? "N/A"),
+    customer: {
+      name: p.customer?.name ?? p.customer_name,
+      firstName: p.customer?.firstName ?? p.customer_first_name,
+      lastName: p.customer?.lastName ?? p.customer_last_name,
+      email: p.customer?.email ?? p.customer_email,
+      address: p.customer?.address ?? p.customer_address,
+      city: p.customer?.city ?? p.customer_city,
+      country: p.customer?.country ?? p.customer_country,
+      zip: p.customer?.zip ?? p.customer_zip,
+    },
+    items: Array.isArray(p.items) ? p.items : (Array.isArray(p.order_items) ? p.order_items : []),
+    total: Number(p.total ?? 0),
+    status: (p.status ?? "pending") as OrderStatus,
+    paymentMethod: p.payment_method ?? p.paymentMethod,
+    createdAt: p.created_at ?? p.createdAt ?? new Date().toISOString(),
+  };
+}
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -34,9 +71,9 @@ export default function AdminOrdersPage() {
   const showToast = (message: string, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast(t => ({ ...t, show: false })), 3000); };
 
   useEffect(() => {
-    fetch("/api/admin/orders")
+    fetch("/backend/admin/orders")
       .then(r => r.json())
-      .then((d: Order[]) => setOrders(Array.isArray(d) ? d : []))
+      .then((d: any) => setOrders(Array.isArray(d) ? d.map(mapApiOrder) : []))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -44,10 +81,10 @@ export default function AdminOrdersPage() {
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     setUpdatingId(orderId);
     try {
-      const res = await fetch(`/api/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
+      const res = await fetch(`/backend/admin/orders/${orderId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: newStatus }) });
       if (res.ok) {
-        setOrders(p => p.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
-        if (selected?._id === orderId) setSelected(p => p ? { ...p, status: newStatus } : null);
+        setOrders(p => p.map(o => (o._id === orderId || String(o.id) === orderId) ? { ...o, status: newStatus } : o));
+        if ((selected?._id === orderId || String(selected?.id) === orderId)) setSelected(p => p ? { ...p, status: newStatus } : null);
         showToast("Status updated");
       } else showToast("Failed to update", false);
     } finally { setUpdatingId(null); }
@@ -57,7 +94,7 @@ export default function AdminOrdersPage() {
 
   const filtered = useMemo(() => {
     let list = orders;
-    if (statusFilter !== "all") list = list.filter(o => o.status === statusFilter);
+    if (statusFilter !== "all") list = list.filter(o => String(o.status || "").toLowerCase() === statusFilter);
     if (search.trim()) { const q = search.toLowerCase(); list = list.filter(o => o.orderNumber.toLowerCase().includes(q) || cName(o).toLowerCase().includes(q) || (o.customer?.email ?? "").toLowerCase().includes(q)); }
     return list;
   }, [orders, statusFilter, search]);
@@ -78,10 +115,10 @@ export default function AdminOrdersPage() {
         <input type="text" placeholder="Search by order ID or customer…" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
           style={{ flex: 1, minWidth: 200, border: "0.5px solid rgba(0,0,0,0.15)", padding: "10px 14px", fontSize: "13px", outline: "none", fontFamily: "DM Sans, sans-serif", background: "#fafaf8" }} />
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {[["all", "All"], ...Object.entries(S).map(([k, v]) => [k, v.label])].map(([val, lbl]) => (
+          {UNIQUE_FILTERS.map(({ val, label }) => (
             <button key={val} onClick={() => { setStatusFilter(val); setPage(1); }}
               style={{ padding: "10px 14px", fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", border: "0.5px solid", borderColor: statusFilter === val ? "#0a0a0a" : "rgba(0,0,0,0.2)", background: statusFilter === val ? "#0a0a0a" : "transparent", color: statusFilter === val ? "#fafaf8" : "#8a8680", transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
-              {lbl}
+              {label}
             </button>
           ))}
         </div>
@@ -112,8 +149,9 @@ export default function AdminOrdersPage() {
               <tbody>
                 {paginated.map(order => {
                   const cfg = S[order.status] ?? S.pending;
+                  const orderId = order._id || String(order.id) || order.orderNumber;
                   return (
-                    <tr key={order._id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.05)" }}>
+                    <tr key={orderId} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.05)" }}>
                       <td style={{ padding: "14px 16px" }}>
                         <button onClick={() => setSelected(order)} style={{ fontFamily: "monospace", fontSize: "12px", color: "#c9a96e", background: "none", border: "none", textDecoration: "underline" }}>{order.orderNumber}</button>
                       </td>
@@ -122,7 +160,7 @@ export default function AdminOrdersPage() {
                         {order.customer?.email && <div style={{ fontSize: "11px", color: "#8a8680" }}>{order.customer.email}</div>}
                       </td>
                       <td style={{ padding: "14px 16px", fontSize: "13px", color: "#8a8680" }}>{order.items.length} {order.items.length === 1 ? "item" : "items"}</td>
-                      <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600 }}>${order.total.toFixed(2)}</td>
+                      <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600 }}>${Number(order.total || 0).toFixed(2)}</td>
                       <td style={{ padding: "14px 16px" }}>
                         <span style={{ fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, padding: "4px 10px", borderRadius: 100, color: cfg.color, background: cfg.bg }}>{cfg.label}</span>
                       </td>
@@ -130,10 +168,18 @@ export default function AdminOrdersPage() {
                         {new Date(order.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
-                        <select value={order.status} disabled={updatingId === order._id} onChange={e => handleStatusUpdate(order._id, e.target.value as OrderStatus)}
-                          style={{ border: "0.5px solid rgba(0,0,0,0.15)", padding: "7px 10px", fontSize: "12px", outline: "none", background: "#fafaf8", fontFamily: "DM Sans, sans-serif", appearance: "none" as const, opacity: updatingId === order._id ? 0.5 : 1 }}>
-                          {ALL_STATUSES.map(s => <option key={s} value={s}>{S[s]?.label ?? s}</option>)}
-                        </select>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", alignItems: "flex-start" }}>
+                          <select value={order.status} disabled={updatingId === orderId} onChange={e => handleStatusUpdate(orderId, e.target.value as OrderStatus)}
+                            style={{ border: "0.5px solid rgba(0,0,0,0.15)", padding: "7px 10px", fontSize: "12px", outline: "none", background: "#fafaf8", fontFamily: "DM Sans, sans-serif", appearance: "none" as const, opacity: updatingId === orderId ? 0.5 : 1 }}>
+                            {ALL_STATUSES.map(s => <option key={s} value={s}>{S[s]?.label ?? s}</option>)}
+                          </select>
+                          {order.status.toLowerCase() === "pending" && (
+                            <div style={{ display: "flex", gap: "6px" }}>
+                              <button onClick={() => handleStatusUpdate(orderId, "Processing")} disabled={updatingId === orderId} style={{ padding: "4px 8px", fontSize: "10px", fontWeight: 600, background: "#065f46", color: "white", border: "none", borderRadius: "2px", cursor: updatingId === orderId ? "not-allowed" : "pointer", opacity: updatingId === orderId ? 0.5 : 1 }}>Confirm</button>
+                              <button onClick={() => handleStatusUpdate(orderId, "Cancelled")} disabled={updatingId === orderId} style={{ padding: "4px 8px", fontSize: "10px", fontWeight: 600, background: "#991b1b", color: "white", border: "none", borderRadius: "2px", cursor: updatingId === orderId ? "not-allowed" : "pointer", opacity: updatingId === orderId ? 0.5 : 1 }}>Reject</button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -196,7 +242,7 @@ export default function AdminOrdersPage() {
                           <div style={{ fontSize: "13px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name ?? "Product"}</div>
                           <div style={{ fontSize: "11px", color: "#8a8680" }}>{item.size} · {item.color} · Qty {item.qty}</div>
                         </div>
-                        <div style={{ fontSize: "13px", fontWeight: 500, flexShrink: 0 }}>${((item.price ?? 0) * (item.qty ?? 1)).toFixed(2)}</div>
+                        <div style={{ fontSize: "13px", fontWeight: 500, flexShrink: 0 }}>${(Number(item.price ?? 0) * Number(item.qty ?? 1)).toFixed(2)}</div>
                       </div>
                     ))}
                   </div>
@@ -205,7 +251,7 @@ export default function AdminOrdersPage() {
                 {/* Total */}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 16, borderTop: "0.5px solid rgba(0,0,0,0.08)" }}>
                   <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.1em", color: "#8a8680" }}>Total</span>
-                  <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "28px", fontWeight: 300 }}>${selected.total.toFixed(2)}</span>
+                  <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "28px", fontWeight: 300 }}>${Number(selected.total || 0).toFixed(2)}</span>
                 </div>
 
                 {/* Status update */}
@@ -214,9 +260,10 @@ export default function AdminOrdersPage() {
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     {ALL_STATUSES.map(s => {
                       const isActive = selected.status === s;
+                      const selectedId = selected._id || String(selected.id) || selected.orderNumber;
                       return (
-                        <button key={s} disabled={isActive || updatingId === selected._id} onClick={() => handleStatusUpdate(selected._id, s)}
-                          style={{ padding: 10, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid", borderColor: isActive ? "#0a0a0a" : "rgba(0,0,0,0.2)", background: isActive ? "#0a0a0a" : "transparent", color: isActive ? "#fafaf8" : "#0a0a0a", opacity: updatingId === selected._id ? 0.6 : 1, transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
+                        <button key={s} disabled={isActive || updatingId === selectedId} onClick={() => handleStatusUpdate(selectedId, s)}
+                          style={{ padding: 10, fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", border: "0.5px solid", borderColor: isActive ? "#0a0a0a" : "rgba(0,0,0,0.2)", background: isActive ? "#0a0a0a" : "transparent", color: isActive ? "#fafaf8" : "#0a0a0a", opacity: updatingId === selectedId ? 0.6 : 1, transition: "all 0.2s", fontFamily: "DM Sans, sans-serif" }}>
                           {S[s]?.label ?? s}
                         </button>
                       );
@@ -235,3 +282,5 @@ export default function AdminOrdersPage() {
     </motion.div>
   );
 }
+
+

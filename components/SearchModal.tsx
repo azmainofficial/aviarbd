@@ -46,7 +46,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
 
   // Load products from API once on mount
   useEffect(() => {
-    fetch("/api/products")
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`)
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data) && data.length > 0) {
