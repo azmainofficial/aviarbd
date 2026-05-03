@@ -25,7 +25,7 @@ export interface OrderLineItem {
 }
 
 export type OrderPaymentMethod = "Card" | "Cash on Delivery";
-export type OrderStatus = "pending" | "paid" | "Processing" | "Shipped" | "Delivered";
+export type OrderStatus = "pending" | "paid" | "Processing" | "Shipped" | "Delivered" | "Cancelled" | "cancelled";
 
 export interface CreateOrderBody {
   customer: OrderCustomer;

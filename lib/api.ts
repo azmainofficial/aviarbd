@@ -22,8 +22,11 @@ export function apiUrl(path: string): string {
   if (isServer()) {
     return `${LARAVEL_API}/${clean}`;
   }
-  // Route through proxy so no browser SW can intercept
-  return `/backend/${clean}`;
+  if (process.env.NEXT_PUBLIC_IS_STATIC_EXPORT === "true") {
+    return `/api/${clean}`;
+  }
+  // Route through native Next.js proxy in dev so no browser SW can intercept
+  return `/laravel-api/${clean}`;
 }
 
 export async function apiFetch(
