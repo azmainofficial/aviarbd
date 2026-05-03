@@ -3,12 +3,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cpanel": "cross-env NEXT_STATIC_EXPORT=true next build",
+    "build:cpanel": "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_IS_STATIC_EXPORT=true next build",
     "start": "next start",
     "lint": "eslint",
     "laravel-dev": "vite",
     "laravel-build": "vite build",
-    "build-all": "cross-env NEXT_STATIC_EXPORT=true next build && robocopy out public /E /MOVE /XF index.php .htaccess"
+    "build-all": "cross-env NEXT_STATIC_EXPORT=true NEXT_PUBLIC_IS_STATIC_EXPORT=true next build && robocopy out public /E /MOVE /XF index.php .htaccess"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.3.0",
