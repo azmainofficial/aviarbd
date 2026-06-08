@@ -4,44 +4,62 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useAbandonedSave } from "@/lib/useAbandonedSave";
+import { apiFetch } from "@/lib/api";
 
 // Supported coupon codes
 const COUPONS: Record<string, { type: "percent" | "fixed" | "shipping"; value: number; label: string }> = {
   AVIAR10: { type: "percent", value: 10, label: "10% off" },
-  SAVE20: { type: "fixed", value: 20, label: "$20 off" },
+  SAVE20: { type: "fixed", value: 20, label: "৳20 off" },
   FREESHIP: { type: "shipping", value: 0, label: "Free shipping" },
 };
 
 type PaymentMethod = "cod";
 
 function CheckoutForm() {
-  const { cart, cartTotal, clearCart } = useCart();
   const router = useRouter();
+  const { cart, cartTotal, clearCart } = useCart();
+  const { customer, token, loading: authLoading } = useAuth();
 
+  // ALL useState/useEffect hooks MUST come before any early returns
+  const [mounted, setMounted] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [form, setForm] = useState({
-    firstName: "", lastName: "", email: "",
-    address: "", city: "", country: "", zip: "",
+    firstName: "", // used for Full Name
+    phone: "",
+    address: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDesktop, setIsDesktop] = useState(true);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState("");
   const { save: saveAbandoned } = useAbandonedSave();
 
   useEffect(() => {
+    setMounted(true);
     const update = () => setIsDesktop(window.innerWidth >= 1024);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Coupon
-  const [couponInput, setCouponInput] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [couponError, setCouponError] = useState("");
+  // Pre-fill form if customer is logged in
+  useEffect(() => {
+    if (customer && mounted) {
+      setForm((prev) => ({
+        ...prev,
+        firstName: customer.name || prev.firstName,
+        address: customer.address || prev.address,
+        phone: customer.phone || prev.phone,
+      }));
+    }
+  }, [customer, mounted]);
 
+  // Derived values (not hooks — safe after hooks)
   const shipping = cartTotal >= 150 ? 0 : 12;
 
   const discount = (() => {
@@ -57,17 +75,17 @@ function CheckoutForm() {
   const effectiveShipping = appliedCoupon && COUPONS[appliedCoupon]?.type === "shipping" ? 0 : shipping;
   const total = Math.max(0, cartTotal - (appliedCoupon && COUPONS[appliedCoupon]?.type !== "shipping" ? discount : 0) + effectiveShipping);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const updated = { ...form, [e.target.name]: e.target.value };
     setForm(updated);
-    // Save abandoned checkout whenever email is valid
+    // Save abandoned checkout
     saveAbandoned({
-      email: updated.email,
-      name: `${updated.firstName} ${updated.lastName}`.trim(),
+      email: "", // email removed from UI
+      name: updated.firstName.trim(),
       address: updated.address,
-      city: updated.city,
-      country: updated.country,
-      zip: updated.zip,
+      city: "",
+      country: "",
+      zip: "",
       items: cart.map((i) => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, size: i.size, color: i.color, image: i.image, category: i.category })),
       total,
       source: "checkout",
@@ -93,11 +111,23 @@ function CheckoutForm() {
 
     try {
       if (paymentMethod === "cod") {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/orders`, {
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await apiFetch("/orders", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify({
-            customer: { firstName: form.firstName, lastName: form.lastName, name: `${form.firstName} ${form.lastName}`, email: form.email, address: form.address, city: form.city, country: form.country, zip: form.zip },
+            customer: {
+              firstName: form.firstName,
+              lastName: "",
+              email: "guest@aviarbd.com", // dummy email since it's nullable in DB but sometimes useful for tracking
+              phone: form.phone,
+              address: form.address,
+              city: "",
+              country: "",
+              zip: ""
+            },
             items: cart,
             total,
             paymentMethod: "Cash on Delivery",
@@ -127,6 +157,9 @@ function CheckoutForm() {
     width: "100%",
   };
 
+  // Only render after client mount to avoid hydration mismatch
+  if (!mounted) return null;
+
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: isDesktop ? "48px 48px 80px" : "32px 20px 60px", display: "grid", gridTemplateColumns: isDesktop ? "1fr 380px" : "1fr", gap: isDesktop ? "64px" : "40px", alignItems: "start" }}>
 
@@ -138,26 +171,35 @@ function CheckoutForm() {
         </h1>
 
         <form onSubmit={handleSubmit}>
-          {/* Contact */}
+          {/* Contact & Shipping */}
           <div style={{ marginBottom: isDesktop ? "40px" : "28px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Contact Information</div>
-            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr" : "1fr", gap: "12px", marginBottom: "12px" }}>
-              <input name="firstName" placeholder="First Name" value={form.firstName} onChange={handleChange} required style={inputStyle} />
-              <input name="lastName" placeholder="Last Name" value={form.lastName} onChange={handleChange} required style={inputStyle} />
-            </div>
-            <input name="email" type="email" placeholder="Email Address" value={form.email} onChange={handleChange} required style={inputStyle} />
-          </div>
-
-          {/* Shipping */}
-          <div style={{ marginBottom: isDesktop ? "40px" : "28px" }}>
-            <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Shipping Address</div>
+            <div style={{ fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#8a8680", marginBottom: "20px" }}>Contact & Shipping Information</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <input name="address" placeholder="Street Address" value={form.address} onChange={handleChange} required style={inputStyle} />
-              <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "1fr 1fr 1fr" : "1fr 1fr", gap: "12px" }}>
-                <input name="city" placeholder="City" value={form.city} onChange={handleChange} required style={inputStyle} />
-                <input name="country" placeholder="Country" value={form.country} onChange={handleChange} required style={inputStyle} />
-                <input name="zip" placeholder="ZIP Code" value={form.zip} onChange={handleChange} required style={{ ...inputStyle, gridColumn: isDesktop ? "auto" : "1 / -1" }} />
-              </div>
+              <input 
+                name="firstName" 
+                placeholder="Full Name" 
+                value={form.firstName} 
+                onChange={handleChange} 
+                required 
+                style={inputStyle} 
+              />
+              <input 
+                name="phone" 
+                type="tel" 
+                placeholder="Phone Number" 
+                value={form.phone} 
+                onChange={handleChange} 
+                required 
+                style={inputStyle} 
+              />
+              <textarea 
+                name="address" 
+                placeholder="Full Address (House, Road, Area, City)" 
+                value={form.address} 
+                onChange={handleChange} 
+                required 
+                style={{ ...inputStyle, minHeight: "100px", resize: "none" }} 
+              />
             </div>
           </div>
 
@@ -191,7 +233,7 @@ function CheckoutForm() {
 
           <button type="submit" disabled={loading || cart.length === 0}
             style={{ width: "100%", background: "#0a0a0a", color: "#fafaf8", border: "none", padding: "18px", fontSize: "12px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: loading ? "not-allowed" : "pointer", opacity: loading ? 0.7 : 1, transition: "opacity 0.2s" }}>
-            {loading ? "Processing..." : `Place Order — $${total.toFixed(2)}`}
+            {loading ? "Processing..." : `Place Order — ৳${total.toFixed(2)}`}
           </button>
           <p style={{ textAlign: "center", fontSize: "11px", color: "#8a8680", marginTop: "16px" }}>🔒 Secure 256-bit SSL encryption</p>
         </form>
@@ -212,7 +254,7 @@ function CheckoutForm() {
                   <div style={{ fontSize: "14px", fontFamily: "Cormorant Garamond, serif" }}>{item.name}</div>
                   <div style={{ fontSize: "11px", color: "#8a8680", marginTop: "2px" }}>{item.size} · {item.color} · Qty {item.qty}</div>
                 </div>
-                <div style={{ fontSize: "14px", marginLeft: "16px", flexShrink: 0 }}>${(item.price * item.qty).toFixed(2)}</div>
+                <div style={{ fontSize: "14px", marginLeft: "16px", flexShrink: 0 }}>৳{(item.price * item.qty).toFixed(2)}</div>
               </div>
             ))}
 
@@ -267,7 +309,7 @@ function CheckoutForm() {
             <div style={{ borderTop: "0.5px solid rgba(0,0,0,0.08)", paddingTop: "16px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#8a8680", marginBottom: "8px" }}>
                 <span>Subtotal</span>
-                <span>${cartTotal.toFixed(2)}</span>
+                <span>৳{cartTotal.toFixed(2)}</span>
               </div>
 
               {discount > 0 && (
@@ -280,13 +322,13 @@ function CheckoutForm() {
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#8a8680", marginBottom: "16px" }}>
                 <span>Shipping</span>
                 <span style={{ color: effectiveShipping === 0 ? "#c9a96e" : "#0a0a0a" }}>
-                  {effectiveShipping === 0 ? "Free" : `$${effectiveShipping.toFixed(2)}`}
+                  {effectiveShipping === 0 ? "Free" : `৳${effectiveShipping.toFixed(2)}`}
                 </span>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "16px", borderTop: "0.5px solid rgba(0,0,0,0.1)" }}>
                 <span style={{ fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#8a8680" }}>Total</span>
-                <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "28px" }}>${total.toFixed(2)}</span>
+                <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "28px" }}>৳{total.toFixed(2)}</span>
               </div>
             </div>
           </>

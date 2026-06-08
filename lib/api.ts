@@ -6,10 +6,46 @@
  * On the server:   calls Laravel directly (no proxy hop needed)
  */
 
-const LARAVEL_API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api").replace(/\/$/, "");
+const DEFAULT_API = "https://aviarbd.com/api";
+const LARAVEL_API = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API).replace(/\/$/, "");
+
 
 function isServer() {
   return typeof window === "undefined";
+}
+
+/**
+ * Resolve any media URL (image, video, etc.)
+ * If the URL is relative, or points to localhost in a production environment,
+ * it redirects it to the correct production backend domain.
+ */
+export function resolveMediaUrl(url: string | null | undefined): string {
+  if (!url) return "";
+
+  const isDev = LARAVEL_API.includes("localhost") || LARAVEL_API.includes("127.0.0.1");
+  const baseUrl = LARAVEL_API.replace(/\/api$/, "");
+
+  // 1. Handle absolute URLs from the database (e.g., http://localhost:8000/uploads/...)
+  if (url.startsWith("http")) {
+    // In DEV: Strip localhost/127.0.0.1 prefix to use Next.js /public folder
+    if (isDev && (url.includes("localhost:") || url.includes("127.0.0.1:"))) {
+      return url.replace(/^https?:\/\/(localhost|127\.0\.0\.1):[0-9]+/, "");
+    }
+    // In PROD: Swap localhost/127.0.0.1 with the real production domain
+    if (!isDev && (url.includes("localhost:") || url.includes("127.0.0.1:"))) {
+      return url.replace(/^https?:\/\/(localhost|127\.0\.0\.1):[0-9]+/, baseUrl);
+    }
+    return url;
+  }
+
+  // 2. Handle relative paths (e.g., "/uploads/..." or "uploads/...")
+  // In DEV: Keep relative so Next.js serves from its own /public folder
+  if (isDev) {
+    return url.startsWith("/") ? url : `/${url}`;
+  }
+
+  // In PROD: Prepend the production base URL
+  return url.startsWith("/") ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
 }
 
 /**
@@ -19,13 +55,19 @@ function isServer() {
  */
 export function apiUrl(path: string): string {
   const clean = path.replace(/^\//, "");
+
+  // If we have an absolute URL for the API, use it (especially for static exports)
+  if (process.env.NEXT_PUBLIC_IS_STATIC_EXPORT === "true" || !isServer()) {
+    if (LARAVEL_API.startsWith("http")) {
+      return `${LARAVEL_API}/${clean}`;
+    }
+  }
+
   if (isServer()) {
     return `${LARAVEL_API}/${clean}`;
   }
-  if (process.env.NEXT_PUBLIC_IS_STATIC_EXPORT === "true") {
-    return `/api/${clean}`;
-  }
-  // Route through native Next.js proxy in dev so no browser SW can intercept
+
+  // Fallback to proxy route for standard Next.js deployments
   return `/laravel-api/${clean}`;
 }
 
@@ -51,5 +93,4 @@ export async function apiJson<T = unknown>(
   return res.json() as Promise<T>;
 }
 
-/** Alias kept for backward-compat with components that import fetchAPI */
 export const fetchAPI = apiFetch;

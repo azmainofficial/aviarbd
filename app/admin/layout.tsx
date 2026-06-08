@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/api";
 import type { ReactNode } from "react";
+
 
 const NAV_ITEMS = [
   {
@@ -84,13 +86,15 @@ const SIDEBAR_W = 240;
 
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(false);
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
+    setMounted(true);
     const check = () => setIsDesktop(window.innerWidth >= 1024);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
-  return isDesktop;
+  return { isDesktop, mounted };
 }
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
@@ -98,8 +102,8 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
 
   const handleLogout = async () => {
-    const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    await fetch(`${API}/admin/logout`, { method: "POST", credentials: "include" });
+    await fetch(apiUrl("/admin/logout"), { method: "POST", credentials: "include" });
+
     localStorage.removeItem("admin_token");
     router.push("/admin/login");
   };
@@ -176,6 +180,25 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           </svg>
           View Store
         </Link>
+
+        <button
+          onClick={handleLogout}
+          style={{
+            display: "flex", alignItems: "center", gap: "12px",
+            padding: "11px 24px", fontSize: "13px", letterSpacing: "0.05em",
+            textDecoration: "none", color: "#c0392b", background: "transparent",
+            border: "none", borderLeft: "2px solid transparent",
+            cursor: "pointer", marginTop: "4px", width: "100%", textAlign: "left",
+            fontFamily: "inherit"
+          }}
+        >
+          <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Logout
+        </button>
       </nav>
 
       {/* User + Logout */}
@@ -246,9 +269,9 @@ function MobileBottomNav() {
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const pathname  = usePathname();
-  const router    = useRouter();
-  const isDesktop = useIsDesktop();
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isDesktop, mounted } = useIsDesktop();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Close drawer when navigating
@@ -259,12 +282,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     if (pathname !== "/admin/login" && pathname !== "/admin/login/" && !localStorage.getItem("admin_token")) {
       router.replace("/admin/login");
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
   if (pathname === "/admin/login" || pathname === "/admin/login/") {
     return <div data-admin="true" style={{ minHeight: "100vh" }}>{children}</div>;
   }
+
+  // Prevent hydration mismatch by only rendering the layout once mounted
+  if (!mounted) return <div data-admin="true" style={{ minHeight: "100vh", background: "#f4f4f2" }} />;
 
   return (
     <div data-admin="true" style={{ minHeight: "100vh", background: "#f4f4f2", display: "flex" }}>

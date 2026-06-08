@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
+import { apiUrl } from "@/lib/api";
+
 
 interface Message {
   _id: string;
@@ -58,16 +60,22 @@ export default function LiveChat() {
   const [unread, setUnread] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionChecked = useRef(false);
 
   const scrollToBottom = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/api/chat/${convId}/messages`);
-    if (!res.ok) return;
-    const data = await res.json();
-    setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
+    try {
+      const res = await fetch(apiUrl(`/chat/${convId}/messages`));
+
+      if (!res.ok) return;
+      const data = await res.json();
+      setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
+    } catch (error) {
+      // Ignore network errors gracefully
+    }
   }, []);
 
   // Poll for new messages when chat is open and conversation exists
@@ -85,12 +93,17 @@ export default function LiveChat() {
   useEffect(() => {
     if (!conversation || open) return;
     const check = async () => {
-      const sessionId = localStorage.getItem("chat_session_id");
-      if (!sessionId) return;
-      const res = await fetch(`/api/chat?sessionId=${sessionId}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.conversation) setUnread(Number(data.conversation.unread_by_customer ?? data.conversation.unreadByCustomer ?? 0));
+      try {
+        const sessionId = localStorage.getItem("chat_session_id");
+        if (!sessionId) return;
+        const res = await fetch(apiUrl(`/chat?sessionId=${sessionId}`));
+
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.conversation) setUnread(Number(data.conversation.unread_by_customer ?? data.conversation.unreadByCustomer ?? 0));
+      } catch (error) {
+        // Ignore network errors gracefully
+      }
     };
     check();
     const id = setInterval(check, 10000);
@@ -106,11 +119,14 @@ export default function LiveChat() {
     if (messages.length) scrollToBottom();
   }, [messages]);
 
-  // Restore existing session on mount
+  // Restore existing session — only when user first opens chat (not on every page load)
   useEffect(() => {
+    if (!open || sessionChecked.current) return;
+    sessionChecked.current = true;
     const sessionId = localStorage.getItem("chat_session_id");
     if (!sessionId) return;
-    fetch(`/api/chat?sessionId=${sessionId}`)
+    fetch(apiUrl(`/chat?sessionId=${sessionId}`))
+
       .then((r) => r.json())
       .then((data) => {
         if (data.conversation) {
@@ -120,8 +136,8 @@ export default function LiveChat() {
           setUnread(conv.unreadByCustomer);
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => { });
+  }, [open]);
 
   const startChat = async () => {
     if (!name.trim() || starting) return;
@@ -129,12 +145,13 @@ export default function LiveChat() {
     setStartError("");
     try {
       const sessionId = getOrCreateSessionId();
-      const res = await fetch("/api/chat", {
+      const res = await fetch(apiUrl("/chat"), {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId, customerName: name.trim(), customerEmail: email.trim() }),
       });
-      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      if (!res.ok) throw new Error(`Server error ৳{res.status}`);
       const data = await res.json();
       const conv = mapApiConversation(data.conversation);
       if (!conv?._id) throw new Error("No conversation returned");
@@ -162,7 +179,8 @@ export default function LiveChat() {
     ]);
     scrollToBottom();
     try {
-      const res = await fetch(`/api/chat/${conversation._id}/messages`, {
+      const res = await fetch(apiUrl(`/chat/${conversation._id}/messages`), {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),

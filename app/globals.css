@@ -14,50 +14,12 @@
 }
 
 * {
-  cursor: none;
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-/* Restore normal cursor on touch / coarse-pointer devices (phones, tablets) */
-@media (hover: none) or (pointer: coarse) {
-  * {
-    cursor: auto !important;
-  }
 
-  a,
-  button,
-  [role="button"] {
-    cursor: pointer !important;
-  }
-
-  input,
-  textarea {
-    cursor: text !important;
-  }
-}
-
-/* Normal cursor for all admin pages */
-[data-admin],
-[data-admin] * {
-  cursor: auto !important;
-}
-
-[data-admin] a,
-[data-admin] button,
-[data-admin] select,
-[data-admin] input,
-[data-admin] textarea,
-[data-admin] label[for],
-[data-admin] [role="button"] {
-  cursor: pointer !important;
-}
-
-[data-admin] input,
-[data-admin] textarea {
-  cursor: text !important;
-}
 
 html {
   scroll-behavior: smooth;
@@ -65,7 +27,7 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: var(--font-dm-sans), sans-serif;
   background: var(--white);
   color: var(--black);
   overflow-x: hidden;
@@ -79,7 +41,7 @@ footer {
 }
 
 .font-display {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: var(--font-cormorant), serif;
 }
 
 @keyframes shimmer {

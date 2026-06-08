@@ -4,7 +4,9 @@ import { useState, memo, type MouseEvent } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWishlist } from "@/context/WishlistContext";
+import { resolveMediaUrl } from "@/lib/api";
 
 export type Product = {
   id: string;
@@ -25,10 +27,14 @@ type ProductCardProps = {
 };
 
 const ProductCard = memo(function ProductCard({ product, onAddToCart, priority }: ProductCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [imgHovered, setImgHovered] = useState(false);
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const router = useRouter();
   const inWishlist = isInWishlist(product.id);
   const slug = product.slug || product.name.toLowerCase().replace(/\s+/g, "-");
+  const discount = product.originalPrice
+    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+    : null;
 
   const handleWishlist = (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
@@ -44,240 +50,253 @@ const ProductCard = memo(function ProductCard({ product, onAddToCart, priority }
     });
   };
 
+  const handleAddToCart = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToCart(product);
+  };
+
+  const handleBuyNow = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onAddToCart(product);
+    router.push("/checkout");
+  };
+
   return (
-    <>
-      <style>{`
-        @keyframes flowGradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true, margin: "-40px" }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        style={{
-          position: "relative",
-          width: "100%",
-          aspectRatio: "3/4",
-          borderRadius: "24px",
-          overflow: "hidden",
-          cursor: "pointer",
-          boxShadow: isHovered
-            ? "0 30px 60px rgba(0,0,0,0.15), 0 0 40px rgba(252, 182, 159, 0.4)"
-            : "0 10px 30px rgba(0,0,0,0.05)",
-          transform: isHovered ? "translateY(-10px) scale(1.02)" : "translateY(0) scale(1)",
-          transition: "all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-        }}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-40px" }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      style={{
+        width: "100%",
+        borderRadius: "20px",
+        overflow: "hidden",
+        background: "#fff",
+        boxShadow: "0 2px 16px rgba(0,0,0,0.07)",
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "DM Sans, sans-serif",
+        position: "relative",
+      }}
+    >
+      {/* ── Image Area ── */}
+      <Link
+        href={`/product/?slug=${slug}`}
+        style={{ display: "block", position: "relative", textDecoration: "none" }}
+        aria-label={`View ${product.name}`}
+        onMouseEnter={() => setImgHovered(true)}
+        onMouseLeave={() => setImgHovered(false)}
       >
-        {/* Animated Dynamic Gradient Background */}
-        <div style={{
-          position: "absolute",
-          inset: "-50%",
-          background: "linear-gradient(45deg, #ff9a9e 0%, #fecfef 25%, #f6d365 50%, #fda085 75%, #ff9a9e 100%)",
-          backgroundSize: "400% 400%",
-          animation: isHovered ? "flowGradient 3s ease infinite" : "flowGradient 10s ease infinite",
-          zIndex: 0,
-          opacity: isHovered ? 1 : 0.4,
-          transition: "opacity 0.5s ease",
-        }} />
+        <div
+          style={{
+            position: "relative",
+            width: "100%",
+            aspectRatio: "1 / 1",
+            background: "linear-gradient(145deg, #f9f5f0 0%, #ede8df 100%)",
+            overflow: "hidden",
+          }}
+        >
+          {product.image ? (
+            <Image
+              src={resolveMediaUrl(product.image)}
+              alt={product.name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1200px) 33vw, 25vw"
+              style={{
+                objectFit: "cover",
+                transition: "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                transform: imgHovered ? "scale(1.07)" : "scale(1)",
+              }}
+              priority={priority}
+            />
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "64px",
+                transition: "transform 0.5s ease",
+                transform: imgHovered ? "scale(1.1)" : "scale(1)",
+              }}
+            >
+              {product.icon}
+            </div>
+          )}
 
-        {/* Inner shadow/border for 3D look */}
-        <div style={{
-          position: "absolute",
-          inset: 0,
-          border: "1px solid rgba(255,255,255,0.4)",
-          borderRadius: "24px",
-          zIndex: 5,
-          pointerEvents: "none",
-        }} />
+          {/* Overlay on hover (desktop) */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.12)",
+              opacity: imgHovered ? 1 : 0,
+              transition: "opacity 0.3s ease",
+            }}
+          />
+        </div>
 
-        {/* Wishlist Button */}
+        {/* Badge */}
+        {product.badge && (
+          <div
+            style={{
+              position: "absolute",
+              top: "12px",
+              left: "12px",
+              background: product.badge === "sale" ? "#c0392b" : "#0a0a0a",
+              color: "#fff",
+              fontSize: "9px",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              padding: "4px 10px",
+              borderRadius: "100px",
+            }}
+          >
+            {product.badge === "sale" && discount ? `-${discount}%` : product.badge}
+          </div>
+        )}
+
+        {/* Wishlist */}
         <button
           onClick={handleWishlist}
           aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
           style={{
             position: "absolute",
-            top: "16px",
-            right: "16px",
-            zIndex: 30,
-            width: "40px",
-            height: "40px",
+            top: "10px",
+            right: "10px",
+            width: "34px",
+            height: "34px",
             borderRadius: "50%",
-            background: inWishlist ? "#c0392b" : "rgba(255,255,255,0.3)",
-            backdropFilter: "blur(8px)",
-            border: "1px solid rgba(255,255,255,0.5)",
+            background: inWishlist ? "#c0392b" : "rgba(255,255,255,0.85)",
+            backdropFilter: "blur(6px)",
+            border: "none",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: "20px",
-            color: inWishlist ? "white" : "#1a1a1a",
+            fontSize: "16px",
             cursor: "pointer",
-            transition: "all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-            transform: isHovered ? "scale(1.1)" : "scale(1)",
+            color: inWishlist ? "#fff" : "#333",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+            transition: "all 0.2s ease",
+            zIndex: 10,
           }}
         >
           {inWishlist ? "♥" : "♡"}
         </button>
+      </Link>
 
-        {/* Badge */}
-        {product.badge && (
-          <div style={{
-            position: "absolute",
-            top: "20px",
-            left: "20px",
-            zIndex: 30,
-            background: "rgba(0,0,0,0.8)",
-            backdropFilter: "blur(8px)",
-            color: "white",
-            padding: "6px 14px",
-            borderRadius: "100px",
-            fontSize: "10px",
-            fontWeight: 700,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            border: "1px solid rgba(255,255,255,0.2)",
-          }}>
-            {product.badge}
-          </div>
-        )}
+      {/* ── Info Area ── */}
+      <div style={{ padding: "14px 14px 16px", display: "flex", flexDirection: "column", gap: "10px" }}>
 
-        {/* Product Image / Icon */}
-        <div style={{
-          position: "absolute",
-          top: "10%",
-          left: "0",
-          right: "0",
-          bottom: "35%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 10,
-          transition: "transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-          transform: isHovered ? "scale(1.15) translateY(-5%)" : "scale(1) translateY(0)",
-        }}>
-          {product.image ? (
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              style={{ objectFit: "contain", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}
-              priority={priority}
-            />
-          ) : (
-            <div style={{ fontSize: "72px", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.2))" }}>
-              {product.icon}
-            </div>
-          )}
-        </div>
-
-        {/* Glassmorphic Bottom Panel */}
-        <div style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: "rgba(255, 255, 255, 0.4)",
-          backdropFilter: "blur(20px)",
-          borderTop: "1px solid rgba(255, 255, 255, 0.6)",
-          padding: "16px 20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          zIndex: 20,
-          transition: "transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
-          transform: isHovered ? "translateY(0)" : "translateY(56px)",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <div>
-              <div style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", color: "#5a5a5a", fontFamily: "DM Sans, sans-serif", marginBottom: "6px" }}>
-                {product.category}
-              </div>
-              <h3 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "18px", fontWeight: 600, color: "#1a1a1a", margin: 0, lineHeight: 1.1 }}>
+        {/* Category + Name + Price */}
+        <div>
+          <p style={{ fontSize: "9px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#aaa", margin: "0 0 4px" }}>
+            {product.category}
+          </p>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+            <Link
+              href={`/product/?slug=${slug}`}
+              style={{ textDecoration: "none", flex: 1, minWidth: 0 }}
+            >
+              <h3
+                style={{
+                  fontFamily: "Cormorant Garamond, serif",
+                  fontSize: "16px",
+                  fontWeight: 600,
+                  color: "#1a1a1a",
+                  margin: 0,
+                  lineHeight: 1.25,
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
                 {product.name}
               </h3>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "18px", fontWeight: 700, color: "#1a1a1a", fontFamily: "DM Sans, sans-serif" }}>
-                ${product.price}
+            </Link>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: "15px", fontWeight: 700, color: "#1a1a1a" }}>
+                ৳{product.price}
               </div>
               {product.originalPrice && (
-                <div style={{ fontSize: "12px", textDecoration: "line-through", color: "#8a8680", fontFamily: "DM Sans, sans-serif" }}>
-                  ${product.originalPrice}
+                <div style={{ fontSize: "11px", textDecoration: "line-through", color: "#bbb" }}>
+                  ৳{product.originalPrice}
                 </div>
               )}
             </div>
           </div>
-
-          {/* Action Buttons */}
-          <div style={{ marginTop: "12px", display: "flex", gap: "8px", opacity: isHovered ? 1 : 0, transition: "opacity 0.3s" }}>
-            <button
-              onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAddToCart(product); }}
-              style={{
-                flex: 1,
-                background: "linear-gradient(90deg, #0a0a0a 0%, #2a2a2a 100%)",
-                color: "white",
-                border: "none",
-                borderRadius: "12px",
-                padding: "13px 8px",
-                fontSize: "11px",
-                fontWeight: 600,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                fontFamily: "DM Sans, sans-serif",
-                boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
-                transition: "transform 0.2s, box-shadow 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-            >
-              Add to Bag
-            </button>
-            <Link
-              href={`/buy/${slug}`}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                flex: 1,
-                background: "linear-gradient(90deg, #c9a96e 0%, #b8924a 100%)",
-                color: "#0a0a0a",
-                border: "none",
-                borderRadius: "12px",
-                padding: "13px 8px",
-                fontSize: "11px",
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                cursor: "pointer",
-                fontFamily: "DM Sans, sans-serif",
-                boxShadow: "0 8px 16px rgba(201,169,110,0.4)",
-                transition: "transform 0.2s",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                zIndex: 20,
-                position: "relative",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.03)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-            >
-              Buy Now
-            </Link>
-          </div>
         </div>
 
-        {/* Invisible Link */}
-        <Link href={`/product/${slug}`} style={{ position: "absolute", inset: 0, zIndex: 15 }} aria-label={`View ${product.name}`} />
-      </motion.div>
-    </>
+        {/* ── Action Buttons ── */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={handleAddToCart}
+            style={{
+              flex: 1,
+              background: "#0a0a0a",
+              color: "#fff",
+              border: "none",
+              borderRadius: "10px",
+              padding: "10px 6px",
+              fontSize: "10px",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "DM Sans, sans-serif",
+              transition: "background 0.2s ease, transform 0.15s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "5px",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "#2a2a2a"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "#0a0a0a"; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>
+            Add
+          </button>
+
+          <button
+            onClick={handleBuyNow}
+            style={{
+              flex: 1,
+              background: "linear-gradient(135deg, #c9a96e 0%, #b8924a 100%)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "10px",
+              padding: "10px 6px",
+              fontSize: "10px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+              fontFamily: "DM Sans, sans-serif",
+              transition: "filter 0.2s ease, transform 0.15s ease",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "5px",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.filter = "brightness(1.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.filter = "brightness(1)"; }}
+            onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.97)"; }}
+            onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 12 19 12" /><polyline points="13 6 19 12 13 18" /></svg>
+            Buy
+          </button>
+        </div>
+      </div>
+    </motion.div>
   );
 });
 
 export default ProductCard;
-

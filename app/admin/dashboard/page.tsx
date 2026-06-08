@@ -2,7 +2,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { apiUrl } from "@/lib/api";
 import type { OrderStatus } from "@/lib/types";
+
 
 interface DashboardData {
   totalRevenue: number;
@@ -14,7 +16,7 @@ interface DashboardData {
 }
 interface RecentOrder {
   _id: string; orderNumber: string;
-  customer: { name?: string; email?: string };
+  customer: { name?: string; phone?: string };
   total: number; status: OrderStatus; createdAt: string;
   items: { name?: string }[];
 }
@@ -23,12 +25,12 @@ interface LowStockProduct {
 }
 
 const S: Record<string, { label: string; color: string; bg: string }> = {
-  pending:    { label: "Pending",    color: "#92400e", bg: "#fef3c7" },
-  paid:       { label: "Paid",       color: "#1e40af", bg: "#dbeafe" },
+  pending: { label: "Pending", color: "#92400e", bg: "#fef3c7" },
+  paid: { label: "Paid", color: "#1e40af", bg: "#dbeafe" },
   Processing: { label: "Processing", color: "#b45309", bg: "#fef3c7" },
-  Shipped:    { label: "Shipped",    color: "#1e40af", bg: "#dbeafe" },
-  Delivered:  { label: "Delivered",  color: "#065f46", bg: "#d1fae5" },
-  Cancelled:  { label: "Cancelled",  color: "#991b1b", bg: "#fee2e2" },
+  Shipped: { label: "Shipped", color: "#1e40af", bg: "#dbeafe" },
+  Delivered: { label: "Delivered", color: "#065f46", bg: "#d1fae5" },
+  Cancelled: { label: "Cancelled", color: "#991b1b", bg: "#fee2e2" },
 };
 
 export default function AdminDashboard() {
@@ -36,38 +38,39 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/admin/dashboard`)
+    fetch(apiUrl("/admin/dashboard"))
+
       .then(r => r.json())
-      .then((d: any) => { 
+      .then((d: any) => {
         if (typeof d?.totalRevenue === "number") {
           const mappedOrders = Array.isArray(d.recentOrders) ? d.recentOrders.map((o: any) => ({
             _id: String(o.id ?? o._id ?? ""),
             orderNumber: o.order_number ?? o.orderNumber ?? "",
             customer: {
-              name: o.customer_name ?? o.customer?.name,
-              email: o.customer_email ?? o.customer?.email
+              name: o.customer_first_name ?? o.customer?.name,
+              phone: o.customer_phone ?? o.customer?.phone
             },
             total: Number(o.total ?? 0),
             status: o.status ?? "pending",
             createdAt: o.created_at ?? o.createdAt ?? new Date().toISOString(),
             items: o.items ?? []
           })) : [];
-          
+
           setData({
             ...d,
             recentOrders: mappedOrders
           });
-        } 
+        }
       })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   const stats = [
-    { label: "Total Revenue", value: data ? `$${(data.totalRevenue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—", sub: "All time" },
-    { label: "Total Orders",  value: data ? String(data.totalOrders ?? 0) : "—",   sub: "All time" },
-    { label: "Total Products",value: data ? String(data.totalProducts ?? 0) : "—", sub: "In catalogue" },
-    { label: "New Customers", value: data ? String(data.newCustomers ?? 0) : "—",  sub: "This month" },
+    { label: "Total Revenue", value: data ? `৳${(data.totalRevenue ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "—", sub: "All time" },
+    { label: "Total Orders", value: data ? String(data.totalOrders ?? 0) : "—", sub: "All time" },
+    { label: "Total Products", value: data ? String(data.totalProducts ?? 0) : "—", sub: "In catalogue" },
+    { label: "New Customers", value: data ? String(data.newCustomers ?? 0) : "—", sub: "This month" },
   ];
 
   return (
@@ -132,8 +135,8 @@ export default function AdminDashboard() {
                     return (
                       <tr key={order._id} style={{ borderBottom: "0.5px solid rgba(0,0,0,0.04)" }}>
                         <td style={{ padding: "16px 16px 16px 28px", fontFamily: "monospace", fontSize: "12px", color: "#c9a96e" }}>{order.orderNumber}</td>
-                        <td style={{ padding: "16px", fontSize: "13px" }}>{order.customer?.name ?? order.customer?.email ?? "—"}</td>
-                        <td style={{ padding: "16px", fontSize: "13px", fontWeight: 500 }}>${Number(order.total || 0).toFixed(2)}</td>
+                        <td style={{ padding: "16px", fontSize: "13px" }}>{order.customer?.name ?? order.customer?.phone ?? "—"}</td>
+                        <td style={{ padding: "16px", fontSize: "13px", fontWeight: 500 }}>৳{Number(order.total || 0).toFixed(2)}</td>
                         <td style={{ padding: "16px" }}>
                           <span style={{ fontSize: "10px", letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 600, padding: "4px 10px", borderRadius: 100, color: cfg.color, background: cfg.bg }}>{cfg.label}</span>
                         </td>
@@ -186,7 +189,7 @@ export default function AdminDashboard() {
                   <Link key={p._id} href={`/admin/products/${p._id}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px", background: "#fffbeb", border: "0.5px solid rgba(245,158,11,0.25)", textDecoration: "none" }}>
                     <div>
                       <div style={{ fontSize: "13px", fontWeight: 500, color: "#0a0a0a" }}>{p.name}</div>
-                      <div style={{ fontSize: "11px", color: "#8a8680", marginTop: 2 }}>${p.price}</div>
+                      <div style={{ fontSize: "11px", color: "#8a8680", marginTop: 2 }}>৳{p.price}</div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: "13px", fontWeight: 700, color: "#92400e" }}>{p.stockCount} left</div>

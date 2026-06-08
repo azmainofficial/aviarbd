@@ -25,6 +25,15 @@ Route::get('/test', function () {
     ]);
 });
 
+// Customer Auth
+Route::post('/customers/register', [App\Http\Controllers\Api\CustomerAuthController::class, 'register']);
+Route::post('/customers/login', [App\Http\Controllers\Api\CustomerAuthController::class, 'login']);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/customers/me', [App\Http\Controllers\Api\CustomerAuthController::class, 'me']);
+    Route::get('/customers/me/orders', [App\Http\Controllers\Api\CustomerAuthController::class, 'orders']);
+    Route::post('/customers/logout', [App\Http\Controllers\Api\CustomerAuthController::class, 'logout']);
+});
+
 Route::get('/products', [App\Http\Controllers\Api\ProductController::class, 'index']);
 Route::get('/products/{slug}', [App\Http\Controllers\Api\ProductController::class, 'show']);
 Route::get('/categories', [App\Http\Controllers\Api\CategoryController::class, 'index']);
@@ -44,6 +53,7 @@ Route::prefix('admin')->group(function () {
     Route::get('orders', [App\Http\Controllers\Api\OrderController::class, 'index']);
     Route::patch('orders/{id}', [App\Http\Controllers\Api\OrderController::class, 'updateStatus']);
     Route::get('dashboard', [App\Http\Controllers\Api\DashboardController::class, 'index']);
+    Route::get('customers', [App\Http\Controllers\Api\AdminCustomerController::class, 'index']);
     Route::get('abandoned', [App\Http\Controllers\AbandonedCartController::class, 'index']);
     Route::patch('abandoned/{id}', [App\Http\Controllers\AbandonedCartController::class, 'updateStatus']);
     Route::delete('abandoned/{id}', [App\Http\Controllers\AbandonedCartController::class, 'destroy']);

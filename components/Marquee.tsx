@@ -5,7 +5,7 @@ import { Fragment } from "react";
 import { motion } from "framer-motion";
 
 const phrases =[
-  "Free shipping on orders over $150",
+  "Free shipping on orders over ৳150",
   "New Arrivals Every Monday",
   "Ethically Sourced Materials",
   "30-Day Returns, No Questions",

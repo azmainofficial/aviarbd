@@ -2,6 +2,8 @@
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/api";
+
 import Link from "next/link";
 import Image from "next/image";
 import type { ProductSection } from "@/lib/types";
@@ -23,7 +25,7 @@ const label: React.CSSProperties = { fontSize: "10px", letterSpacing: "0.15em", 
 
 export default function AddProductPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ name: "", description: "", price: "", originalPrice: "", stockCount: "0", inStock: true, category: "Clothing", sizes: [] as string[], colors: [] as string[], colorInput: "", section: "" as ProductSection | "" });
+  const [form, setForm] = useState({ name: "", description: "", price: "", originalPrice: "", stockCount: "0", inStock: true, category: "Clothing", sizes: [] as string[], colors: [] as string[], colorInput: "", section: "" as ProductSection | "", catsList: CATS, catInput: "", showCatInput: false });
   const [images, setImages] = useState<Img[]>([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -38,7 +40,8 @@ export default function AddProductPage() {
 
     // POST to local Next.js API route — Node.js writes directly to disk.
     // Same origin → no CORS, no service worker, no proxy needed.
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch(apiUrl("/upload"), { method: "POST", body: fd });
+
 
     const text = await res.text();
     let json: Record<string, unknown> = {};
@@ -107,7 +110,8 @@ export default function AddProductPage() {
     try {
       const urls = images.filter(i => i.url).map(i => i.url);
       // Use /backend/* — same-origin, routes through Node.js to Laravel (SW-safe)
-      const res = await fetch("/api/admin/products", {
+      const res = await fetch(apiUrl("/admin/products"), {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -225,15 +229,37 @@ export default function AddProductPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <input type="number" placeholder="Price ($) *" value={form.price} min="0" step="0.01" onChange={e => { setForm(p => ({ ...p, price: e.target.value })); setErrors(er => ({ ...er, price: "" })); }} style={errors.price ? inpErr : inp} />
+                  <input type="number" placeholder="Price (৳) *" value={form.price} min="0" step="0.01" onChange={e => { setForm(p => ({ ...p, price: e.target.value })); setErrors(er => ({ ...er, price: "" })); }} style={errors.price ? inpErr : inp} />
                   {errors.price && <p style={{ fontSize: "11px", color: "#c0392b", marginTop: 4 }}>{errors.price}</p>}
                 </div>
-                <input type="number" placeholder="Original Price ($)" value={form.originalPrice} min="0" step="0.01" onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} style={inp} />
+                <input type="number" placeholder="Original Price (৳)" value={form.originalPrice} min="0" step="0.01" onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} style={inp} />
               </div>
-              <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ ...inp, appearance: "none" as const }}>
-                {CATS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
             </div>
+          </div>
+
+          {/* Category */}
+          <div style={card}>
+            <span style={label}>Category</span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {form.catsList.map(cat => (
+                <button key={cat} type="button" onClick={() => setForm(p => ({ ...p, category: cat }))}
+                  style={{ padding: "8px 14px", fontSize: "12px", border: `${form.category === cat ? "1px solid #0a0a0a" : "0.5px solid rgba(0,0,0,0.2)"}`, background: form.category === cat ? "#0a0a0a" : "transparent", color: form.category === cat ? "#fafaf8" : "#0a0a0a", transition: "all 0.15s", cursor: "pointer" }}>
+                  {cat}
+                </button>
+              ))}
+              <button type="button" onClick={() => setForm(p => ({ ...p, showCatInput: !p.showCatInput }))}
+                style={{ padding: "8px 14px", fontSize: "12px", border: "1px dashed rgba(0,0,0,0.3)", background: "transparent", color: "#0a0a0a", cursor: "pointer", transition: "all 0.15s" }}>
+                + Add New
+              </button>
+            </div>
+            {form.showCatInput && (
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <input placeholder="New Category Name" value={form.catInput} onChange={e => setForm(p => ({ ...p, catInput: e.target.value }))} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); const c = form.catInput.trim(); if (c && !form.catsList.includes(c)) setForm(p => ({ ...p, catsList: [...p.catsList, c], category: c, catInput: "", showCatInput: false })); } }}
+                  style={{ ...inp, flex: 1 }} />
+                <button type="button" onClick={() => { const c = form.catInput.trim(); if (c && !form.catsList.includes(c)) setForm(p => ({ ...p, catsList: [...p.catsList, c], category: c, catInput: "", showCatInput: false })); else setForm(p => ({ ...p, showCatInput: false })); }}
+                  style={{ padding: "0 20px", background: "#0a0a0a", color: "#fafaf8", border: "none", fontSize: "12px", letterSpacing: "0.06em", cursor: "pointer" }}>Add</button>
+              </div>
+            )}
           </div>
 
           <div style={card}>

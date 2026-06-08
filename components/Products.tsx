@@ -48,7 +48,6 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("All");
   const [sort, setSort] = useState(initialFilter === "new" ? "newest" : "featured");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
   const [showSaleOnly, setShowSaleOnly] = useState(initialFilter === "sale");
   const [cols, setCols] = useState(4);
   const [currentPage, setCurrentPage] = useState(1);
@@ -149,7 +148,6 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
   const filtered = useMemo(() => {
     let list = activeTab === "All" ? products : products.filter((p) => p.category === activeTab);
     if (showSaleOnly) list = list.filter((p) => p.badge === "sale");
-    list = list.filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
     switch (sort) {
       case "price-asc": return [...list].sort((a, b) => a.price - b.price);
       case "price-desc": return [...list].sort((a, b) => b.price - a.price);
@@ -157,11 +155,11 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
       case "sale": return [...list].sort((a) => (a.badge === "sale" ? -1 : 1));
       default: return list;
     }
-  }, [products, activeTab, sort, priceRange, showSaleOnly]);
+  }, [products, activeTab, sort, showSaleOnly]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, sort, priceRange, showSaleOnly]);
+  }, [activeTab, sort, showSaleOnly]);
 
   const itemsPerPage = shopMode ? 8 : 8;
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -259,13 +257,11 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
               value={sort}
               onChange={(e) => setSort(e.target.value)}
               style={{
-                padding: "8px 12px",
+                background: "transparent",
+                border: "none",
                 fontSize: "11px",
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                border: "0.5px solid rgba(0,0,0,0.15)",
-                background: "none",
-                color: "#0a0a0a",
+                letterSpacing: "0.06em",
+                color: "#8a8680",
                 cursor: "pointer",
                 outline: "none",
                 fontFamily: "DM Sans, sans-serif",
@@ -280,23 +276,6 @@ export default function Products({ shopMode = false, initialFilter }: ProductsPr
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-
-            {/* Price range — hide on smallest screens */}
-            {cols > 2 && (
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "11px", color: "#8a8680", letterSpacing: "0.06em" }}>
-                <span>$0</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={1000}
-                  step={50}
-                  value={priceRange[1]}
-                  onChange={(e) => setPriceRange([0, Number(e.target.value)])}
-                  style={{ width: "80px", accentColor: "#c9a96e" }}
-                />
-                <span>${priceRange[1]}</span>
-              </div>
-            )}
           </div>
         </div>
 

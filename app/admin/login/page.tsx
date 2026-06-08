@@ -4,13 +4,12 @@ import { useState, type SyntheticEvent, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+import { apiUrl } from "@/lib/api";
 
 export default function AdminLoginPage() {
-  const [form, setForm]       = useState({ email: "", password: "" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [showPwd, setShowPwd] = useState(false);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
@@ -22,10 +21,10 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError("");
     try {
-      const res  = await fetch("/api/admin/login", {
-        method:  "POST",
+      const res = await fetch(apiUrl("/admin/login"), {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(form),
+        body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Invalid credentials");
@@ -177,11 +176,10 @@ export default function AdminLoginPage() {
               </label>
               <input
                 type="email"
-                placeholder="admin@aviar.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
-                autoComplete="email"
+                autoComplete="off"
                 style={{
                   width: "100%",
                   padding: "13px 16px",
@@ -195,7 +193,7 @@ export default function AdminLoginPage() {
                   transition: "border-color 0.2s",
                 }}
                 onFocus={(e) => (e.target.style.borderColor = "#c9a96e")}
-                onBlur={(e)  => (e.target.style.borderColor = "rgba(0,0,0,0.15)")}
+                onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.15)")}
               />
             </div>
 
@@ -207,11 +205,10 @@ export default function AdminLoginPage() {
               <div style={{ position: "relative" }}>
                 <input
                   type={showPwd ? "text" : "password"}
-                  placeholder="••••••••"
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   required
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   style={{
                     width: "100%",
                     padding: "13px 48px 13px 16px",
@@ -225,7 +222,7 @@ export default function AdminLoginPage() {
                     transition: "border-color 0.2s",
                   }}
                   onFocus={(e) => (e.target.style.borderColor = "#c9a96e")}
-                  onBlur={(e)  => (e.target.style.borderColor = "rgba(0,0,0,0.15)")}
+                  onBlur={(e) => (e.target.style.borderColor = "rgba(0,0,0,0.15)")}
                 />
                 <button
                   type="button"
@@ -303,17 +300,6 @@ export default function AdminLoginPage() {
               ) : "Sign In →"}
             </button>
           </form>
-
-          {/* Hint */}
-          <div style={{ marginTop: "32px", padding: "16px", background: "rgba(0,0,0,0.04)", borderLeft: "2px solid #c9a96e" }}>
-            <div style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#8a8680", marginBottom: "6px", fontFamily: "DM Sans, sans-serif" }}>
-              Default Credentials
-            </div>
-            <div style={{ fontSize: "12px", color: "#5a5a5a", fontFamily: "DM Sans, sans-serif", lineHeight: 1.8 }}>
-              Email: <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 5px" }}>admin@aviar.com</code><br />
-              Pass: <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 5px" }}>admin123</code>
-            </div>
-          </div>
 
           <Link href="/" style={{ display: "block", textAlign: "center", marginTop: "24px", fontSize: "11px", color: "#8a8680", textDecoration: "none", letterSpacing: "0.08em", fontFamily: "DM Sans, sans-serif" }}>
             ← Back to Store

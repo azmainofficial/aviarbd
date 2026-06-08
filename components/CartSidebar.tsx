@@ -5,6 +5,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
+import { resolveMediaUrl } from "@/lib/api";
 
 export default function CartSidebar() {
   const router = useRouter();
@@ -17,6 +19,7 @@ export default function CartSidebar() {
     cartTotal,
     addToCart,
   } = useCart();
+  const { customer } = useAuth();
 
   const handleAddUpsell = () => {
     addToCart({
@@ -85,7 +88,7 @@ export default function CartSidebar() {
                       {/* Image Placeholder */}
                       <div className="w-[72px] h-[72px] shrink-0 bg-[#f5f2ec] flex items-center justify-center text-[28px] overflow-hidden">
                         {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          <img src={resolveMediaUrl(item.image)} alt={item.name} className="w-full h-full object-cover" />
                         ) : (
                           item.image ?? "🛍️"
                         )}
@@ -98,7 +101,7 @@ export default function CartSidebar() {
                             {item.name}
                           </h3>
                           <div className="text-[13px] text-gold mt-1">
-                            ${item.price.toFixed(2)}
+                            ৳{item.price.toFixed(2)}
                           </div>
                         </div>
 
@@ -168,20 +171,27 @@ export default function CartSidebar() {
               <div className="flex items-end justify-between mb-6">
                 <span className="text-[14px] text-muted">Subtotal</span>
                 <span className="font-display text-[24px] text-black leading-none">
-                  ${cartTotal.toFixed(2)}
+                  ৳{cartTotal.toFixed(2)}
                 </span>
               </div>
 
               <button
                 disabled={cart.length === 0}
-                onClick={() => { closeCart(); router.push("/checkout"); }}
+                onClick={() => { 
+                  closeCart(); 
+                  if (!customer) {
+                    router.push("/login?redirect=/checkout");
+                  } else {
+                    router.push("/checkout"); 
+                  }
+                }}
                 className="w-full bg-black text-white py-[16px] text-[13px] uppercase tracking-[0.12em] hover:bg-gold hover:text-black transition-colors duration-300 disabled:opacity-50 disabled:hover:bg-black disabled:hover:text-white"
               >
                 Proceed to Checkout
               </button>
 
               <div className="text-center text-[11px] text-muted mt-4">
-                🔒 Secure checkout · Free shipping over $150
+                🔒 Secure checkout · Free shipping over ৳150
               </div>
             </div>
           </motion.div>

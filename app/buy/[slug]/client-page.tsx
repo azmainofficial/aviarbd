@@ -7,6 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAbandonedSave } from "@/lib/useAbandonedSave";
+import { apiFetch, apiUrl, resolveMediaUrl } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -42,19 +44,43 @@ function BuyForm({ product }: { product: BuyProduct }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isDesktop, setIsDesktop] = useState(true);
+  const [mounted, setMounted] = useState(false);
+  const [form, setForm] = useState({
+    firstName: "", lastName: "", email: "", phone: "",
+    address: "", city: "", country: "", zip: "",
+  });
   const { save: saveAbandoned } = useAbandonedSave();
+  const { customer, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    if (!authLoading && !customer) {
+      router.push(`/login?redirect=/buy/${product.slug}`);
+    }
+  }, [customer, authLoading, router, product.slug]);
+
+  useEffect(() => {
+    setMounted(true);
     const update = () => setIsDesktop(window.innerWidth >= 1024);
     update();
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const [form, setForm] = useState({
-    firstName: "", lastName: "", email: "",
-    address: "", city: "", country: "", zip: "",
-  });
+  // Pre-fill form if customer is logged in
+  useEffect(() => {
+    if (customer && mounted) {
+      setForm((prev) => ({
+        ...prev,
+        email: customer.email || prev.email,
+        firstName: customer.name ? customer.name.split(" ")[0] : prev.firstName,
+        lastName: customer.name ? customer.name.split(" ").slice(1).join(" ") : prev.lastName,
+        address: customer.address || prev.address,
+        city: customer.city || prev.city,
+        country: customer.country || prev.country,
+        phone: customer.phone || prev.phone,
+      }));
+    }
+  }, [customer, mounted]);
 
   const shipping = product.price * qty >= 150 ? 0 : 12;
   const subtotal = product.price * qty;
@@ -120,7 +146,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
       };
 
       if (payMethod === "cod") {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api"}/orders`, {
+        const res = await apiFetch("/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderPayload),
@@ -186,7 +212,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
               <div style={{ aspectRatio: "3/4", background: "#f5f2ec", position: "relative", overflow: "hidden", marginBottom: 10 }}>
                 {product.images.length > 0 ? (
                   <Image
-                    src={product.images[activeImg]}
+                    src={resolveMediaUrl(product.images[activeImg])}
                     alt={product.name}
                     fill
                     style={{ objectFit: "cover" }}
@@ -210,7 +236,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
                   {product.images.map((src, i) => (
                     <button key={i} onClick={() => setActiveImg(i)}
                       style={{ width: 56, height: 70, border: activeImg === i ? "1.5px solid #0a0a0a" : "0.5px solid rgba(0,0,0,0.15)", padding: 0, cursor: "pointer", overflow: "hidden", position: "relative", background: "none", flexShrink: 0 }}>
-                      <Image src={src} alt={`View ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="56px" />
+                      <Image src={resolveMediaUrl(src)} alt={`View ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="56px" />
                     </button>
                   ))}
                 </div>
@@ -222,12 +248,12 @@ function BuyForm({ product }: { product: BuyProduct }) {
               {/* Price */}
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
                 {product.originalPrice && (
-                  <span style={{ fontSize: "14px", color: "#8a8680", textDecoration: "line-through" }}>${product.originalPrice}</span>
+                  <span style={{ fontSize: "14px", color: "#8a8680", textDecoration: "line-through" }}>৳{product.originalPrice}</span>
                 )}
-                <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "36px", color: "#0a0a0a" }}>${product.price}</span>
+                <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "36px", color: "#0a0a0a" }}>৳{product.price}</span>
                 {product.originalPrice && (
                   <span style={{ fontSize: "11px", color: "#c0392b", padding: "3px 8px", border: "0.5px solid #c0392b" }}>
-                    Save ${product.originalPrice - product.price}
+                    Save ৳{product.originalPrice - product.price}
                   </span>
                 )}
               </div>
@@ -295,7 +321,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
               {/* Perks */}
               <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8 }}>
                 {[
-                  { icon: "🚚", text: subtotal >= 150 ? "Free shipping on your order" : `Free shipping on orders over $150 (add $${(150 - subtotal).toFixed(0)} more)` },
+                  { icon: "🚚", text: subtotal >= 150 ? "Free shipping on your order" : `Free shipping on orders over ৳150 (add ৳${(150 - subtotal).toFixed(0)} more)` },
                   { icon: "↩", text: "30-day hassle-free returns" },
                   { icon: "🔒", text: "Secure 256-bit SSL checkout" },
                   { icon: "📦", text: "Estimated delivery in 3–5 business days" },
@@ -328,7 +354,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
                 <div style={{ display: "flex", gap: 14, marginBottom: 20, paddingBottom: 20, borderBottom: "0.5px solid rgba(0,0,0,0.06)" }}>
                   <div style={{ width: 64, height: 80, background: "#f5f2ec", position: "relative", flexShrink: 0, overflow: "hidden" }}>
                     {product.images.length > 0 ? (
-                      <Image src={product.images[activeImg]} alt={product.name} fill style={{ objectFit: "cover" }} sizes="64px" />
+                      <Image src={resolveMediaUrl(product.images[activeImg])} alt={product.name} fill style={{ objectFit: "cover" }} sizes="64px" />
                     ) : (
                       <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>{product.icon}</div>
                     )}
@@ -343,22 +369,22 @@ function BuyForm({ product }: { product: BuyProduct }) {
                     <div style={{ fontSize: "11px", color: "#8a8680" }}>Qty: {qty}</div>
                   </div>
                   <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "20px", color: "#0a0a0a", flexShrink: 0 }}>
-                    ${(product.price * qty).toFixed(2)}
+                    ৳{(product.price * qty).toFixed(2)}
                   </div>
                 </div>
 
                 {/* Totals */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#8a8680" }}>
-                    <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
+                    <span>Subtotal</span><span>৳{subtotal.toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#8a8680" }}>
                     <span>Shipping</span>
-                    <span style={{ color: shipping === 0 ? "#c9a96e" : "#0a0a0a" }}>{shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}</span>
+                    <span style={{ color: shipping === 0 ? "#c9a96e" : "#0a0a0a" }}>{shipping === 0 ? "Free" : `৳${shipping.toFixed(2)}`}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, borderTop: "0.5px solid rgba(0,0,0,0.08)" }}>
                     <span style={{ fontSize: "12px", letterSpacing: "0.08em", textTransform: "uppercase", color: "#8a8680" }}>Total</span>
-                    <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "26px", color: "#0a0a0a" }}>${total.toFixed(2)}</span>
+                    <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "26px", color: "#0a0a0a" }}>৳{total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -373,16 +399,16 @@ function BuyForm({ product }: { product: BuyProduct }) {
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <label style={labelStyle}>First Name *</label>
-                    <input name="firstName" value={form.firstName} onChange={handleChange} required placeholder="Jane" style={inputStyle} />
+                    <input name="firstName" value={form.firstName} onChange={handleChange} required placeholder="Jane" readOnly={!!customer} style={{ ...inputStyle, opacity: customer ? 0.7 : 1, cursor: customer ? "not-allowed" : "text" }} />
                   </div>
                   <div>
                     <label style={labelStyle}>Last Name *</label>
-                    <input name="lastName" value={form.lastName} onChange={handleChange} required placeholder="Smith" style={inputStyle} />
+                    <input name="lastName" value={form.lastName} onChange={handleChange} required placeholder="Smith" readOnly={!!customer} style={{ ...inputStyle, opacity: customer ? 0.7 : 1, cursor: customer ? "not-allowed" : "text" }} />
                   </div>
                 </div>
                 <div>
                   <label style={labelStyle}>Email Address *</label>
-                  <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="jane@example.com" style={inputStyle} />
+                  <input name="email" type="email" value={form.email} onChange={handleChange} required placeholder="jane@example.com" readOnly={!!customer} style={{ ...inputStyle, opacity: customer ? 0.7 : 1, cursor: customer ? "not-allowed" : "text" }} />
                 </div>
                 <div>
                   <label style={labelStyle}>Street Address *</label>
@@ -444,7 +470,7 @@ function BuyForm({ product }: { product: BuyProduct }) {
                 boxShadow: isOutOfStock ? "none" : "0 8px 24px rgba(201,169,110,0.4)",
               }}
             >
-              {loading ? "Processing…" : isOutOfStock ? "Out of Stock" : `Place Order — $${total.toFixed(2)}`}
+              {loading ? "Processing…" : isOutOfStock ? "Out of Stock" : `Place Order — ৳${total.toFixed(2)}`}
             </button>
             <p style={{ textAlign: "center", fontSize: "11px", color: "#8a8680", marginTop: 12 }}>
               🔒 Secure checkout · 30-day returns
@@ -525,7 +551,7 @@ function BuyPageInner({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/products/${encodeURIComponent(slug)}`)
+    fetch(apiUrl(`/products/${encodeURIComponent(slug)}`))
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();

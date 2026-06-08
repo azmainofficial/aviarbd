@@ -39,7 +39,7 @@ export default function AnnouncementBar() {
       }}
     >
       <span style={{ color: "#c9a96e" }}>✦</span>
-      {"  "}Free shipping over $150 — Use{" "}
+      {"  "}Free shipping over ৳150 — Use{" "}
       <span style={{ color: "#c9a96e", fontWeight: 600 }}>AVIAR10</span>
       {" "}for 10% off{"  "}
       <span style={{ color: "#c9a96e" }}>✦</span>

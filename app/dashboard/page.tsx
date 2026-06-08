@@ -8,6 +8,10 @@ import PageTransition from "@/components/PageTransition";
 import Breadcrumb from "@/components/Breadcrumb";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+import { apiUrl } from "@/lib/api";
+
 
 interface SavedOrderInfo {
   orderNumber: string;
@@ -31,20 +35,23 @@ const STATUS_LABEL: Record<TrackedOrder["status"], string> = {
 };
 
 const STATUS_COLORS: Record<TrackedOrder["status"], { bg: string; fg: string }> = {
-  pending:    { bg: "#fef3c7", fg: "#92400e" },
-  paid:       { bg: "#dbeafe", fg: "#1e40af" },
+  pending: { bg: "#fef3c7", fg: "#92400e" },
+  paid: { bg: "#dbeafe", fg: "#1e40af" },
   Processing: { bg: "#fef3c7", fg: "#b45309" },
-  Shipped:    { bg: "#dbeafe", fg: "#1e40af" },
-  Delivered:  { bg: "#d1fae5", fg: "#065f46" },
+  Shipped: { bg: "#dbeafe", fg: "#1e40af" },
+  Delivered: { bg: "#d1fae5", fg: "#065f46" },
 };
 
 export default function DashboardPage() {
   const { cart, cartTotal, cartCount } = useCart();
   const { wishlist, wishlistCount } = useWishlist();
+  const { customer, token, logout } = useAuth();
+  const router = useRouter();
   const [isDesktop, setIsDesktop] = useState(true);
   const [savedOrder, setSavedOrder] = useState<SavedOrderInfo | null>(null);
   const [latestOrder, setLatestOrder] = useState<TrackedOrder | null>(null);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [userOrders, setUserOrders] = useState<TrackedOrder[]>([]);
 
   useEffect(() => {
     const update = () => setIsDesktop(window.innerWidth >= 768);
@@ -53,24 +60,50 @@ export default function DashboardPage() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Read saved order from localStorage and fetch its current status
+  // Read saved order from localStorage or fetch user orders if authenticated
   useEffect(() => {
+    if (customer && token) {
+      setOrderLoading(true);
+      fetch(apiUrl("/customers/me/orders"), {
+
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then((r) => r.ok ? r.json() : [])
+        .then((data) => {
+          if (Array.isArray(data)) {
+            // Coerce total to number (API may return it as a string)
+            const normalized = data.map((o: any) => ({ ...o, total: Number(o.total) || 0 }));
+            setUserOrders(normalized);
+            if (normalized.length > 0) setLatestOrder(normalized[0]);
+          }
+        })
+        .catch(() => { })
+        .finally(() => setOrderLoading(false));
+      return;
+    }
+
     let info: SavedOrderInfo | null = null;
     try {
       const raw = localStorage.getItem("aviar_last_order");
       if (raw) info = JSON.parse(raw);
-    } catch {}
+    } catch { }
 
     if (!info?.orderNumber || !info?.email) return;
     setSavedOrder(info);
     setOrderLoading(true);
 
-    fetch(`/api/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`)
+    fetch(apiUrl(`/orders/track?orderNumber=${encodeURIComponent(info.orderNumber)}&email=${encodeURIComponent(info.email)}`))
+
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.order) setLatestOrder(data.order); })
-      .catch(() => {})
+      .then((data) => {
+        if (data?.order) {
+          // Coerce total to number (API may return it as a string)
+          setLatestOrder({ ...data.order, total: Number(data.order.total) || 0 });
+        }
+      })
+      .catch(() => { })
       .finally(() => setOrderLoading(false));
-  }, []);
+  }, [customer, token]);
 
   const sectionPad = isDesktop ? "60px 48px 80px" : "32px 20px 60px";
   const cardStyle: React.CSSProperties = {
@@ -98,16 +131,38 @@ export default function DashboardPage() {
             <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "Dashboard" }]} />
 
             <div style={{ marginBottom: isDesktop ? "40px" : "24px" }}>
-              <div style={labelStyle}>Welcome</div>
-              <h1 style={{
-                fontFamily: "Cormorant Garamond, serif",
-                fontSize: "clamp(32px,4vw,56px)", fontWeight: 300,
-                color: "#0a0a0a", lineHeight: 1.1, marginTop: 6,
-              }}>
-                Your <em>Dashboard</em>
-              </h1>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "16px" }}>
+                <div>
+                  <div style={labelStyle}>{customer ? `Welcome back, ${customer.name}` : "Welcome"}</div>
+                  <h1 style={{
+                    fontFamily: "Cormorant Garamond, serif",
+                    fontSize: "clamp(32px,4vw,56px)", fontWeight: 300,
+                    color: "#0a0a0a", lineHeight: 1.1, marginTop: 6,
+                  }}>
+                    Your <em>Dashboard</em>
+                  </h1>
+                </div>
+
+                {customer && (
+                  <button
+                    onClick={() => {
+                      logout();
+                      router.push("/");
+                    }}
+                    style={{
+                      padding: "10px 16px", background: "transparent", border: "0.5px solid rgba(0,0,0,0.15)",
+                      fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#c0392b",
+                      cursor: "pointer", fontFamily: "DM Sans, sans-serif", transition: "all 0.2s"
+                    }}
+                  >
+                    Logout
+                  </button>
+                )}
+              </div>
               <p style={{ fontSize: 14, color: "#8a8680", marginTop: 12, lineHeight: 1.6, maxWidth: 560 }}>
-                Track orders, manage your cart and wishlist, and pick up where you left off.
+                {customer
+                  ? "Track your orders, manage your account, and pick up where you left off."
+                  : "Track orders, manage your cart and wishlist, and pick up where you left off."}
               </p>
             </div>
 
@@ -140,7 +195,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div style={{ fontSize: 13, color: "#8a8680" }}>
-                    {latestOrder.items.length} item{latestOrder.items.length !== 1 ? "s" : ""} · ${latestOrder.total.toFixed(2)} · Placed{" "}
+                    {latestOrder.items.length} item{latestOrder.items.length !== 1 ? "s" : ""} · ${Number(latestOrder.total).toFixed(2)} · Placed{" "}
                     {new Date(latestOrder.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </div>
                 </div>
@@ -164,7 +219,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {!orderLoading && !latestOrder && savedOrder && (
+            {!orderLoading && !latestOrder && savedOrder && !customer && (
               <div style={{ background: "#fff0f0", border: "0.5px solid rgba(192,57,43,0.2)", padding: 16, marginBottom: 20, fontSize: 13, color: "#8a8680" }}>
                 We saved order <strong>{savedOrder.orderNumber}</strong> but couldn&apos;t fetch its current status.{" "}
                 <Link href="/track" style={{ color: "#0a0a0a", textDecoration: "underline" }}>Try again</Link>
@@ -205,7 +260,7 @@ export default function DashboardPage() {
                 </div>
                 <p style={{ fontSize: 13, color: "#8a8680", margin: 0 }}>
                   {cartCount > 0
-                    ? `Subtotal $${cartTotal.toFixed(2)}. Ready when you are.`
+                    ? `Subtotal ৳${cartTotal.toFixed(2)}. Ready when you are.`
                     : "You haven't added anything yet."}
                 </p>
                 <Link href={cartCount > 0 ? "/cart" : "/shop"} style={{
@@ -272,7 +327,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div style={{ fontSize: 14, color: "#0a0a0a", whiteSpace: "nowrap" }}>
-                        ${(item.price * item.qty).toFixed(2)}
+                        ৳{(item.price * item.qty).toFixed(2)}
                       </div>
                     </div>
                   ))}
@@ -299,12 +354,12 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(4, 1fr)" : "repeat(2, 1fr)", gap: 1, background: "rgba(0,0,0,0.04)" }}>
                   {wishlist.slice(0, isDesktop ? 4 : 4).map((item) => (
-                    <Link key={item.id} href={`/product/${item.slug}`} style={{ background: "#fff", padding: 14, textDecoration: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                    <Link key={item.id} href={`/product/?slug=${item.slug}`} style={{ background: "#fff", padding: 14, textDecoration: "none", display: "flex", flexDirection: "column", gap: 8 }}>
                       <div style={{ aspectRatio: "1/1", background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
                         {item.icon}
                       </div>
                       <div style={{ fontSize: 13, color: "#0a0a0a", fontFamily: "Cormorant Garamond, serif" }}>{item.name}</div>
-                      <div style={{ fontSize: 12, color: "#8a8680" }}>${item.price}</div>
+                      <div style={{ fontSize: 12, color: "#8a8680" }}>৳{item.price}</div>
                     </Link>
                   ))}
                 </div>

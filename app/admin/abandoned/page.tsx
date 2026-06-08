@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiUrl } from "@/lib/api";
+
 
 interface AbandonedItem {
   name: string;
@@ -23,14 +25,14 @@ interface AbandonedRecord {
 }
 
 const STATUS_CFG = {
-  abandoned:  { label: "Abandoned",  color: "#991b1b", bg: "#fee2e2" },
-  contacted:  { label: "Contacted",  color: "#92400e", bg: "#fef3c7" },
-  recovered:  { label: "Recovered",  color: "#065f46", bg: "#d1fae5" },
+  abandoned: { label: "Abandoned", color: "#991b1b", bg: "#fee2e2" },
+  contacted: { label: "Contacted", color: "#92400e", bg: "#fef3c7" },
+  recovered: { label: "Recovered", color: "#065f46", bg: "#d1fae5" },
 };
 
 const SOURCE_CFG = {
-  checkout:  { label: "Checkout",  color: "#1e40af", bg: "#dbeafe" },
-  "buy-now": { label: "Buy Now",   color: "#5b21b6", bg: "#ede9fe" },
+  checkout: { label: "Checkout", color: "#1e40af", bg: "#dbeafe" },
+  "buy-now": { label: "Buy Now", color: "#5b21b6", bg: "#ede9fe" },
 };
 
 function mapApiAbandoned(p: any): AbandonedRecord {
@@ -66,7 +68,8 @@ export default function AbandonedPage() {
   };
 
   useEffect(() => {
-    fetch("/api/admin/abandoned")
+    fetch(apiUrl("/admin/abandoned"))
+
       .then((r) => r.json())
       .then((d: any[]) => { if (Array.isArray(d)) setRecords(d.map(mapApiAbandoned)); })
       .catch(console.error)
@@ -96,7 +99,8 @@ export default function AbandonedPage() {
   const handleStatus = async (id: string, status: string) => {
     setActionLoading(id + status);
     try {
-      const res = await fetch(`/api/admin/abandoned/${id}`, {
+      const res = await fetch(apiUrl(`/admin/abandoned/${id}`), {
+
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -113,7 +117,8 @@ export default function AbandonedPage() {
     if (!confirm("Delete this record? This cannot be undone.")) return;
     setActionLoading(id + "del");
     try {
-      const res = await fetch(`/api/admin/abandoned/${id}`, { method: "DELETE" });
+      const res = await fetch(apiUrl(`/admin/abandoned/${id}`), { method: "DELETE" });
+
       if (res.ok) {
         setRecords((prev) => prev.filter((r) => r._id !== id));
         if (selected?._id === id) setSelected(null);
@@ -123,10 +128,10 @@ export default function AbandonedPage() {
   };
 
   const statCards = [
-    { label: "Total Abandoned",   value: stats.total.toString(),                                           sub: "All time" },
-    { label: "Value at Risk",     value: `$${stats.totalValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, sub: "Potential revenue" },
-    { label: "Awaiting Action",   value: stats.abandoned.toString(),                                        sub: "Need follow-up" },
-    { label: "Recovered",         value: stats.recovered.toString(),                                        sub: "Completed purchase" },
+    { label: "Total Abandoned", value: stats.total.toString(), sub: "All time" },
+    { label: "Value at Risk", value: `৳${stats.totalValue.toLocaleString("en-US", { maximumFractionDigits: 0 })}`, sub: "Potential revenue" },
+    { label: "Awaiting Action", value: stats.abandoned.toString(), sub: "Need follow-up" },
+    { label: "Recovered", value: stats.recovered.toString(), sub: "Completed purchase" },
   ];
 
   return (
@@ -166,7 +171,7 @@ export default function AbandonedPage() {
           style={{ flex: 1, minWidth: 180, border: "0.5px solid rgba(0,0,0,0.15)", padding: "10px 14px", fontSize: "13px", outline: "none", fontFamily: "DM Sans, sans-serif", background: "#fafaf8" }}
         />
         <div style={{ display: "flex", gap: 6 }}>
-          {[["all","All"], ["abandoned","Abandoned"], ["contacted","Contacted"], ["recovered","Recovered"]].map(([v, l]) => (
+          {[["all", "All"], ["abandoned", "Abandoned"], ["contacted", "Contacted"], ["recovered", "Recovered"]].map(([v, l]) => (
             <button key={v} onClick={() => setStatusFilter(v)}
               style={{ padding: "10px 14px", fontSize: "11px", letterSpacing: "0.06em", textTransform: "uppercase", border: "0.5px solid", borderColor: statusFilter === v ? "#0a0a0a" : "rgba(0,0,0,0.2)", background: statusFilter === v ? "#0a0a0a" : "transparent", color: statusFilter === v ? "#fafaf8" : "#8a8680", fontFamily: "DM Sans, sans-serif" }}>
               {l}
@@ -238,7 +243,7 @@ export default function AbandonedPage() {
                         <div style={{ fontSize: "11px", color: "#8a8680" }}>{r.items.slice(0, 2).map((i) => i.name).join(", ")}{r.items.length > 2 ? "…" : ""}</div>
                       </td>
                       {/* Total */}
-                      <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600 }}>${r.total.toFixed(2)}</td>
+                      <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 600 }}>৳{r.total.toFixed(2)}</td>
                       {/* Source */}
                       <td style={{ padding: "14px 16px" }}>
                         <span style={{ fontSize: "10px", letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600, padding: "3px 8px", borderRadius: 100, color: src.color, background: src.bg }}>{src.label}</span>
@@ -345,12 +350,12 @@ export default function AbandonedPage() {
                           {[item.color, item.size ? `Size ${item.size}` : null, `Qty ${item.qty}`].filter(Boolean).join(" · ")}
                         </div>
                       </div>
-                      <div style={{ fontSize: "13px", fontWeight: 600 }}>${(item.price * item.qty).toFixed(2)}</div>
+                      <div style={{ fontSize: "13px", fontWeight: 600 }}>৳{(item.price * item.qty).toFixed(2)}</div>
                     </div>
                   ))}
                   <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 14, fontWeight: 600 }}>
                     <span style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.08em", color: "#8a8680" }}>Total</span>
-                    <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "22px" }}>${selected.total.toFixed(2)}</span>
+                    <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "22px" }}>৳{selected.total.toFixed(2)}</span>
                   </div>
                 </div>
 

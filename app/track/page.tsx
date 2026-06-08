@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
 import Breadcrumb from "@/components/Breadcrumb";
 import Link from "next/link";
+import { apiUrl, resolveMediaUrl } from "@/lib/api";
 
 interface TrackedItem {
   productId?: string;
@@ -163,7 +164,7 @@ function TrackContent() {
     setOrder(null);
     try {
       const res = await fetch(
-        `/api/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`
+        apiUrl(`/orders/track?orderNumber=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(emailAddr)}`)
       );
       const data = await res.json();
       if (!res.ok) {
@@ -340,7 +341,7 @@ function TrackContent() {
               <div style={{ textAlign: isDesktop ? "right" : "left" }}>
                 <div style={{ fontSize: 10, letterSpacing: "0.2em", textTransform: "uppercase", color: "#8a8680", marginBottom: 4 }}>Total</div>
                 <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: 22, color: "#0a0a0a" }}>
-                  ${order.total.toFixed(2)}
+                  ৳{order.total.toFixed(2)}
                 </div>
               </div>
             </div>
@@ -360,7 +361,7 @@ function TrackContent() {
                   <div key={i} style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div style={{ width: 56, height: 56, background: "#f5f2ec", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, overflow: "hidden" }}>
                       {item.image && (item.image.includes("http") || item.image.includes("/")) ? (
-                        <img src={item.image} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        <img src={resolveMediaUrl(item.image)} alt={item.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         item.image ?? "🛍️"
                       )}
@@ -372,7 +373,7 @@ function TrackContent() {
                       </div>
                     </div>
                     <div style={{ fontSize: 14, color: "#0a0a0a", whiteSpace: "nowrap" }}>
-                      ${((item.price ?? 0) * (item.qty ?? 1)).toFixed(2)}
+                      ৳{((item.price ?? 0) * (item.qty ?? 1)).toFixed(2)}
                     </div>
                   </div>
                 ))}

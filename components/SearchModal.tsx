@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { apiUrl } from "@/lib/api";
+
 
 interface SearchProduct {
   id: string;
@@ -46,7 +48,8 @@ export default function SearchModal({ isOpen, onClose }: Props) {
 
   // Load products from API once on mount
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/products`)
+    fetch(apiUrl("/products"))
+
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data) && data.length > 0) {
@@ -61,14 +64,14 @@ export default function SearchModal({ isOpen, onClose }: Props) {
           setAllProducts(mapped);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const results = query.length > 1
     ? allProducts.filter((p) =>
-        p.name.toLowerCase().includes(query.toLowerCase()) ||
-        p.category.toLowerCase().includes(query.toLowerCase())
-      )
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.category.toLowerCase().includes(query.toLowerCase())
+    )
     : [];
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function SearchModal({ isOpen, onClose }: Props) {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleKey);

@@ -9,7 +9,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Breadcrumb from "@/components/Breadcrumb";
+import ProductCard from "@/components/ProductCard";
 import type { ProductBadge } from "@/lib/types";
+import { resolveMediaUrl, apiUrl } from "@/lib/api";
+
 
 interface DetailProduct {
   id: string;
@@ -90,7 +93,8 @@ export default function ProductDetail({ slug }: { slug: string }) {
   useEffect(() => {
     setLoading(true);
     setActiveImage(0);
-    fetch(`/api/products/${encodeURIComponent(slug)}`)
+    fetch(apiUrl(`/products/${encodeURIComponent(slug)}`))
+
       .then((r) => {
         if (!r.ok) throw new Error("not found");
         return r.json();
@@ -109,22 +113,23 @@ export default function ProductDetail({ slug }: { slug: string }) {
       .finally(() => setLoading(false));
   }, [slug]);
 
-  // Fetch related products (same category)
+  // Fetch related products (same category, case-insensitive fallback)
   useEffect(() => {
     if (!product) return;
-    fetch("/api/products")
+    fetch(apiUrl("/products"))
+
       .then((r) => r.json())
       .then((data: unknown) => {
         if (!Array.isArray(data)) return;
-        const mapped = (data as Record<string, unknown>[])
-          .map(mapApiProduct)
-          .filter((p) => p.id !== product.id && p.category === product.category)
+        const all = (data as Record<string, unknown>[]).map(mapApiProduct);
+        // Case-insensitive category match, exclude current product
+        const sameCategory = all
+          .filter((p) => p.id !== product.id && p.category.toLowerCase() === product.category.toLowerCase())
           .slice(0, 3);
-        if (mapped.length > 0) {
-          setRelatedProducts(mapped);
-        } else {
-          setRelatedProducts(SAMPLE_PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3));
-        }
+        // If not enough same-category items, fill with any other products
+        const others = all.filter((p) => p.id !== product.id && p.category.toLowerCase() !== product.category.toLowerCase());
+        const related = [...sameCategory, ...others].slice(0, 3);
+        setRelatedProducts(related.length > 0 ? related : SAMPLE_PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3));
       })
       .catch(() => {
         setRelatedProducts(SAMPLE_PRODUCTS.filter((p) => p.id !== product?.id).slice(0, 3));
@@ -141,9 +146,10 @@ export default function ProductDetail({ slug }: { slug: string }) {
       name: product.name,
       price: product.price,
       icon: product.icon,
+      image: product.image ?? undefined,
       category: product.category,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product?.id]);
 
   useEffect(() => {
@@ -157,7 +163,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
     setTimeout(() => setToast(""), 3000);
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCartMain = () => {
     if (!product) return;
     if (product.sizes.length > 0 && product.sizes[0] !== "One Size" && !selectedSize) {
       showToast("Please select a size");
@@ -174,6 +180,21 @@ export default function ProductDetail({ slug }: { slug: string }) {
       qty,
     });
     showToast(`${product.name} added to cart`);
+    openCart();
+  };
+
+  const handleAddToCartCard = (p: any) => {
+    addToCart({
+      id: `${p.id}-One Size-Default`,
+      name: p.name,
+      price: p.price,
+      image: p.image ?? p.icon,
+      category: p.category,
+      size: "One Size",
+      color: "Default",
+      qty: 1,
+    });
+    showToast(`${p.name} added to cart`);
     openCart();
   };
 
@@ -245,7 +266,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
             <div style={{ aspectRatio: "3/4", background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
               {displayImages ? (
                 <Image
-                  src={displayImages[activeImage]}
+                  src={resolveMediaUrl(displayImages[activeImage])}
                   alt={product.name}
                   fill
                   style={{ objectFit: "cover" }}
@@ -268,7 +289,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
                 {displayImages.map((src, i) => (
                   <button key={i} onClick={() => setActiveImage(i)}
                     style={{ width: 64, height: 80, border: activeImage === i ? "1.5px solid #0a0a0a" : "0.5px solid rgba(0,0,0,0.15)", background: "none", padding: 0, cursor: "pointer", overflow: "hidden", position: "relative", flexShrink: 0 }}>
-                    <Image src={src} alt={`${product.name} view ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="64px" />
+                    <Image src={resolveMediaUrl(src)} alt={`${product.name} view ${i + 1}`} fill style={{ objectFit: "cover" }} sizes="64px" />
                   </button>
                 ))}
               </div>
@@ -298,12 +319,12 @@ export default function ProductDetail({ slug }: { slug: string }) {
 
             <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "32px" }}>
               {product.originalPrice && (
-                <span style={{ fontSize: "16px", color: "#8a8680", textDecoration: "line-through" }}>${product.originalPrice}</span>
+                <span style={{ fontSize: "16px", color: "#8a8680", textDecoration: "line-through" }}>৳{product.originalPrice}</span>
               )}
-              <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "32px", color: "#0a0a0a" }}>${product.price}</span>
+              <span style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "32px", color: "#0a0a0a" }}>৳{product.price}</span>
               {product.originalPrice && (
                 <span style={{ fontSize: "12px", color: "#c0392b", padding: "3px 8px", border: "0.5px solid #c0392b" }}>
-                  Save ${product.originalPrice - product.price}
+                  Save ৳{product.originalPrice - product.price}
                 </span>
               )}
             </div>
@@ -363,7 +384,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
                 <span style={{ width: "44px", textAlign: "center", fontSize: "14px" }}>{qty}</span>
                 <button onClick={() => setQty(qty + 1)} style={{ width: "44px", height: "52px", background: "none", border: "none", cursor: "pointer", fontSize: "18px" }}>+</button>
               </div>
-              <button onClick={handleAddToCart} disabled={isOutOfStock}
+              <button onClick={handleAddToCartMain} disabled={isOutOfStock}
                 style={{ flex: 1, background: isOutOfStock ? "#ccc" : "#0a0a0a", color: "#fafaf8", border: "none", fontSize: "12px", letterSpacing: "0.12em", textTransform: "uppercase", cursor: isOutOfStock ? "not-allowed" : "pointer", height: "52px", transition: "opacity 0.2s" }}>
                 {isOutOfStock ? "Out of Stock" : "Add to Cart"}
               </button>
@@ -387,7 +408,7 @@ export default function ProductDetail({ slug }: { slug: string }) {
             </div>
 
             <div style={{ marginTop: "24px", padding: "16px", background: "#f5f2ec", fontSize: "12px", color: "#8a8680", lineHeight: 1.8 }}>
-              🚚 Free shipping on orders over $150<br />
+              🚚 Free shipping on orders over ৳150<br />
               ↩ 30-day returns, no questions asked<br />
               🔒 Secure checkout
             </div>
@@ -397,27 +418,41 @@ export default function ProductDetail({ slug }: { slug: string }) {
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (
-        <div style={{ background: "#f5f2ec", padding: isDesktop ? "64px 48px" : "40px 20px" }}>
+        <div style={{ background: "#f5f2ec", padding: isDesktop ? "80px 48px" : "40px 16px" }}>
+          <style>{`
+            .rp-grid, .rv-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 12px;
+            }
+            @media (min-width: 768px) {
+              .rp-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+              }
+              .rv-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 20px;
+              }
+            }
+          `}</style>
           <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
-            <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "12px" }}>You may also like</div>
-            <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(28px,3vw,48px)", fontWeight: 300, marginBottom: isDesktop ? "40px" : "24px" }}>Related <em>Pieces</em></h2>
-            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? "repeat(3,1fr)" : "repeat(2,1fr)", gap: isDesktop ? "16px" : "12px" }}>
+            <div style={{ textAlign: isDesktop ? "left" : "center", marginBottom: isDesktop ? "40px" : "28px" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#c9a96e", marginBottom: "12px" }}>You may also like</div>
+              <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(28px,3vw,48px)", fontWeight: 300 }}>Related <em>Pieces</em></h2>
+            </div>
+            <div className="rp-grid">
               {relatedProducts.map((p) => (
-                <Link key={p.id} href={`/product/${p.slug}`} style={{ textDecoration: "none" }}>
-                  <motion.div whileHover={{ y: -4 }} style={{ background: "white", cursor: "pointer" }}>
-                    <div style={{ aspectRatio: "3/4", background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", position: "relative" }}>
-                      {p.images.length > 0 ? (
-                        <Image src={p.images[0]} alt={p.name} fill style={{ objectFit: "cover" }} sizes="33vw" />
-                      ) : (
-                        <span style={{ fontSize: "64px" }}>{p.icon}</span>
-                      )}
-                    </div>
-                    <div style={{ padding: "20px" }}>
-                      <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "18px", color: "#0a0a0a", marginBottom: "6px" }}>{p.name}</div>
-                      <div style={{ fontSize: "13px", color: "#0a0a0a" }}>${p.price}</div>
-                    </div>
-                  </motion.div>
-                </Link>
+                <ProductCard
+                  key={p.id}
+                  product={{
+                    ...p,
+                    image: p.image ?? undefined,
+                    badge: p.badge as "new" | "sale" | undefined,
+                    originalPrice: p.originalPrice ?? undefined,
+                  }}
+                  onAddToCart={handleAddToCartCard}
+                />
               ))}
             </div>
           </div>
@@ -426,23 +461,24 @@ export default function ProductDetail({ slug }: { slug: string }) {
 
       {/* Recently Viewed */}
       {recentItems.length > 0 && (
-        <div style={{ background: "#fafaf8", padding: isDesktop ? "64px 48px" : "40px 20px", borderTop: "0.5px solid rgba(0,0,0,0.06)" }}>
+        <div style={{ background: "#fafaf8", borderTop: "0.5px solid rgba(0,0,0,0.06)", padding: isDesktop ? "80px 48px" : "40px 16px" }}>
           <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
-            <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#8a8680", marginBottom: "12px" }}>Your history</div>
-            <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(24px,3vw,40px)", fontWeight: 300, marginBottom: isDesktop ? "32px" : "20px" }}>Recently <em>Viewed</em></h2>
-            <div style={{ display: "grid", gridTemplateColumns: isDesktop ? `repeat(${Math.min(recentItems.length, 4)}, 1fr)` : "repeat(2, 1fr)", gap: isDesktop ? "16px" : "12px" }}>
+            <div style={{ textAlign: isDesktop ? "left" : "center", marginBottom: isDesktop ? "32px" : "20px" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.25em", textTransform: "uppercase", color: "#8a8680", marginBottom: "10px" }}>Your history</div>
+              <h2 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "clamp(22px,3vw,40px)", fontWeight: 300 }}>Recently <em>Viewed</em></h2>
+            </div>
+            <div className="rv-grid">
               {recentItems.slice(0, 4).map((item) => (
-                <Link key={item.id} href={`/product/${item.slug}`} style={{ textDecoration: "none" }}>
-                  <motion.div whileHover={{ y: -4 }} style={{ background: "white", cursor: "pointer" }}>
-                    <div style={{ aspectRatio: "3/4", background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "56px" }}>
-                      {item.icon}
-                    </div>
-                    <div style={{ padding: "16px 20px" }}>
-                      <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "16px", color: "#0a0a0a", marginBottom: "4px" }}>{item.name}</div>
-                      <div style={{ fontSize: "13px", color: "#0a0a0a" }}>${item.price}</div>
-                    </div>
-                  </motion.div>
-                </Link>
+                <ProductCard
+                  key={item.id}
+                  product={{
+                    ...item,
+                    image: item.image ?? undefined,
+                    badge: undefined,
+                    originalPrice: item.originalPrice ?? undefined,
+                  }}
+                  onAddToCart={handleAddToCartCard}
+                />
               ))}
             </div>
           </div>
@@ -477,14 +513,14 @@ export default function ProductDetail({ slug }: { slug: string }) {
         <div style={{ display: "flex", alignItems: "center", gap: isDesktop ? "16px" : "12px", minWidth: 0, flex: 1 }}>
           {product.image ? (
             <div style={{ width: isDesktop ? 40 : 36, height: isDesktop ? 48 : 44, position: "relative", flexShrink: 0 }}>
-              <Image src={product.image} alt={product.name} fill style={{ objectFit: "cover" }} sizes="40px" />
+              <Image src={resolveMediaUrl(product.image)} alt={product.name} fill style={{ objectFit: "cover" }} sizes="40px" />
             </div>
           ) : (
             <div style={{ fontSize: isDesktop ? "32px" : "28px", flexShrink: 0 }}>{product.icon}</div>
           )}
           <div style={{ minWidth: 0, overflow: "hidden" }}>
             <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "18px" : "16px", color: "#0a0a0a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{product.name}</div>
-            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "20px" : "16px", color: "#c9a96e" }}>${product.price}</div>
+            <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: isDesktop ? "20px" : "16px", color: "#c9a96e" }}>৳{product.price}</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center", flexShrink: 0 }}>
@@ -494,16 +530,16 @@ export default function ProductDetail({ slug }: { slug: string }) {
             </span>
           )}
           <button
-            onClick={handleAddToCart}
+            onClick={handleAddToCartMain}
             disabled={isOutOfStock}
-            style={{ 
-              background: isOutOfStock ? "#ccc" : "#0a0a0a", 
-              color: "#fafaf8", 
-              border: "none", 
-              padding: isDesktop ? "14px 40px" : "12px 24px", 
-              fontSize: "12px", 
-              letterSpacing: "0.12em", 
-              textTransform: "uppercase", 
+            style={{
+              background: isOutOfStock ? "#ccc" : "#0a0a0a",
+              color: "#fafaf8",
+              border: "none",
+              padding: isDesktop ? "14px 40px" : "12px 24px",
+              fontSize: "12px",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
               cursor: isOutOfStock ? "not-allowed" : "pointer",
               whiteSpace: "nowrap",
               boxShadow: "0 4px 12px rgba(0,0,0,0.15)"

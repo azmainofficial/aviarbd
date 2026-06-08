@@ -26,7 +26,7 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
       }}
     >
       {items.map((item, i) => (
-        <span key={item.label} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <span key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           {i > 0 && (
             <span style={{ color: "rgba(0,0,0,0.2)", fontSize: "10px" }}>›</span>
           )}

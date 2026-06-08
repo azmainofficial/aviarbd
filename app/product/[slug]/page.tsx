@@ -4,13 +4,15 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProductDetail from "@/components/ProductDetail";
 
+import { apiUrl } from "@/lib/api";
+
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/products");
+    const res = await fetch(apiUrl("/products"));
     const data = await res.json();
     const params = Array.isArray(data) ? data.map((p: any) => ({ slug: String(p.slug || "dummy") })) : [];
     return params.length > 0 ? params : [{ slug: "dummy" }];
@@ -22,8 +24,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-    const res = await fetch(`${apiUrl}/products/${encodeURIComponent(slug)}`, { next: { revalidate: 60 } });
+    const res = await fetch(apiUrl(`/products/${encodeURIComponent(slug)}`), { next: { revalidate: 60 } });
     if (res.ok) {
       const product = await res.json();
       const images = Array.isArray(product.images) ? product.images : (product.image ? [product.image] : []);

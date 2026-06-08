@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAuth } from "@/context/AuthContext";
 import SearchModal from "@/components/SearchModal";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -33,6 +34,7 @@ export default function Navbar() {
   const router = useRouter();
   const { cartCount } = useCart();
   const { wishlistCount } = useWishlist();
+  const { customer, logout, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 80);
@@ -109,6 +111,20 @@ export default function Navbar() {
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </button>
+
+          {/* User Account — desktop only */}
+          {isDesktop && (
+            <Link
+              href={customer ? "/dashboard" : "/login"}
+              aria-label={customer ? "My Account" : "Login"}
+              style={{ color: textColor, transition: "color 0.4s", minWidth: "44px", minHeight: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
+          )}
 
           {/* Wishlist — desktop only */}
           {isDesktop && (
@@ -246,24 +262,58 @@ export default function Navbar() {
                 }}>
                   Your Account
                 </div>
-                {DRAWER_EXTRAS.map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
+                
+                <Link
+                  href={customer ? "/dashboard" : "/login"}
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: "block", padding: "14px 0",
+                    fontSize: "14px", letterSpacing: "0.08em", textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.75)",
+                    textDecoration: "none",
+                    borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+                    fontFamily: "DM Sans, sans-serif",
+                    transition: "color 0.2s",
+                  }}
+                >
+                  {customer ? "My Dashboard" : "Login / Create Account"}
+                </Link>
+                <Link
+                  href="/track"
+                  onClick={() => setMobileOpen(false)}
+                  style={{
+                    display: "block", padding: "14px 0",
+                    fontSize: "14px", letterSpacing: "0.08em", textTransform: "uppercase",
+                    color: "rgba(255,255,255,0.75)",
+                    textDecoration: "none",
+                    borderBottom: "0.5px solid rgba(255,255,255,0.06)",
+                    fontFamily: "DM Sans, sans-serif",
+                    transition: "color 0.2s",
+                  }}
+                >
+                  Track Order
+                </Link>
+
+                {customer && (
+                  <button
+                    onClick={() => {
+                      logout();
+                      setMobileOpen(false);
+                      router.push('/');
+                    }}
                     style={{
-                      display: "block", padding: "14px 0",
+                      display: "block", width: "100%", textAlign: "left",
+                      padding: "14px 0", background: "none", border: "none", cursor: "pointer",
                       fontSize: "14px", letterSpacing: "0.08em", textTransform: "uppercase",
-                      color: "rgba(255,255,255,0.75)",
-                      textDecoration: "none",
+                      color: "#c0392b",
                       borderBottom: "0.5px solid rgba(255,255,255,0.06)",
                       fontFamily: "DM Sans, sans-serif",
                       transition: "color 0.2s",
                     }}
                   >
-                    {link.name}
-                  </Link>
-                ))}
+                    Logout
+                  </button>
+                )}
               </nav>
 
               {/* Drawer footer */}

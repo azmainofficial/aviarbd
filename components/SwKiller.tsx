@@ -14,7 +14,7 @@ export function SwKiller() {
 
     navigator.serviceWorker.getRegistrations().then((registrations) => {
       if (registrations.length === 0) return;
-      console.info(`[SwKiller] Removing ${registrations.length} service worker(s)…`);
+      console.info(`[SwKiller] Removing ৳{registrations.length} service worker(s)…`);
       registrations.forEach((reg) => {
         reg.unregister().then((ok) => {
           if (ok) console.info("[SwKiller] Unregistered SW at scope:", reg.scope);

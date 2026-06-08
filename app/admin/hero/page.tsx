@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { apiUrl } from "@/lib/api";
+
 
 interface HeroSlide {
   id: number;
@@ -21,7 +23,7 @@ export default function AdminHeroSlides() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   // new slide form
   const [showForm, setShowForm] = useState(false);
   const [slideType, setSlideType] = useState<"custom" | "product">("custom");
@@ -33,11 +35,13 @@ export default function AdminHeroSlides() {
 
   const fetchSlides = async () => {
     try {
-      const res = await fetch("/api/admin/hero-slides");
+      const res = await fetch(apiUrl("/admin/hero-slides"));
+
       if (res.ok) {
         setSlides(await res.json());
       }
-      const prodRes = await fetch("/api/admin/products");
+      const prodRes = await fetch(apiUrl("/admin/products"));
+
       if (prodRes.ok) {
         const prodData = await prodRes.json();
         setProducts(Array.isArray(prodData) ? prodData : (prodData.data ?? []));
@@ -60,7 +64,7 @@ export default function AdminHeroSlides() {
         image: img,
         headline: p.name ?? "",
         sub: p.description ? p.description.substring(0, 100) + "..." : "Premium quality, crafted with care",
-        href: `/product/${p.slug ?? p.id}`,
+        href: `/product/?slug=${p.slug ?? p.id}`,
         label: p.badge === "new" ? "New Arrival" : "Collection",
         cta: "Shop Now"
       });
@@ -74,7 +78,8 @@ export default function AdminHeroSlides() {
     const formData = new FormData();
     formData.append("image", e.target.files[0]);
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const res = await fetch(apiUrl("/upload"), { method: "POST", body: formData });
+
       if (res.ok) {
         const data = await res.json();
         setForm({ ...form, image: data.url });
@@ -92,7 +97,8 @@ export default function AdminHeroSlides() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/hero-slides", {
+      const res = await fetch(apiUrl("/admin/hero-slides"), {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
@@ -109,12 +115,14 @@ export default function AdminHeroSlides() {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this slide?")) return;
-    await fetch(`/api/admin/hero-slides/${id}`, { method: "DELETE" });
+    await fetch(apiUrl(`/admin/hero-slides/${id}`), { method: "DELETE" });
+
     fetchSlides();
   };
 
   const toggleActive = async (slide: HeroSlide) => {
-    await fetch(`/api/admin/hero-slides/${slide.id}`, {
+    await fetch(apiUrl(`/admin/hero-slides/${slide.id}`), {
+
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ is_active: !slide.is_active })
@@ -133,7 +141,7 @@ export default function AdminHeroSlides() {
             Hero Slides
           </h1>
         </div>
-        <button 
+        <button
           onClick={() => setShowForm(!showForm)}
           style={{ background: "#0a0a0a", color: "#fff", border: "none", padding: "12px 24px", fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>
           {showForm ? "Cancel" : "+ Add New Slide"}
@@ -141,11 +149,11 @@ export default function AdminHeroSlides() {
       </div>
 
       {showForm && (
-        <motion.form 
+        <motion.form
           initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSave} 
+          onSubmit={handleSave}
           style={{ background: "#fff", padding: "30px", marginBottom: "30px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-          
+
           <div style={{ gridColumn: "1 / -1", display: "flex", gap: "20px", marginBottom: "10px" }}>
             <div style={{ flex: 1 }}>
               <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px", textTransform: "uppercase" }}>Slide Type</label>
@@ -180,7 +188,7 @@ export default function AdminHeroSlides() {
               </div>
             </div>
             {imageSource === "url" ? (
-              <input required type="text" value={form.image} onChange={e => setForm({...form, image: e.target.value})} placeholder="e.g. /images/products/silk-wrap-blouse.png" style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+              <input required type="text" value={form.image} onChange={e => setForm({ ...form, image: e.target.value })} placeholder="e.g. /images/products/silk-wrap-blouse.png" style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
             ) : (
               <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                 <input type="file" accept="image/*" onChange={handleImageUpload} style={{ width: "100%", padding: "9px", border: "1px dashed #c9a96e", background: "#fdfbf8" }} />
@@ -191,29 +199,29 @@ export default function AdminHeroSlides() {
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Headline</label>
-            <input required type="text" value={form.headline} onChange={e => setForm({...form, headline: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input required type="text" value={form.headline} onChange={e => setForm({ ...form, headline: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Subheadline</label>
-            <input type="text" value={form.sub} onChange={e => setForm({...form, sub: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input type="text" value={form.sub} onChange={e => setForm({ ...form, sub: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Label (e.g. New Arrival)</label>
-            <input type="text" value={form.label} onChange={e => setForm({...form, label: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input type="text" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Button Text</label>
-            <input type="text" value={form.cta} onChange={e => setForm({...form, cta: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input type="text" value={form.cta} onChange={e => setForm({ ...form, cta: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Button Link (e.g. /shop)</label>
-            <input type="text" value={form.href} onChange={e => setForm({...form, href: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input type="text" value={form.href} onChange={e => setForm({ ...form, href: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: "12px", letterSpacing: "0.05em", color: "#8a8680", marginBottom: "8px" }}>Accent Color (Hex)</label>
-            <input type="text" value={form.accent} onChange={e => setForm({...form, accent: e.target.value})} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
+            <input type="text" value={form.accent} onChange={e => setForm({ ...form, accent: e.target.value })} style={{ width: "100%", padding: "12px", border: "1px solid #e0dfdc" }} />
           </div>
-          
+
           <div style={{ gridColumn: "1 / -1", marginTop: "10px" }}>
             <button type="submit" disabled={saving} style={{ background: "#c9a96e", color: "#fff", border: "none", padding: "12px 24px", fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer", width: "100%" }}>
               {saving ? "Saving..." : "Save Slide"}

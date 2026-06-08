@@ -74,7 +74,7 @@ export default function WishlistPage() {
                     >
                       ✕
                     </button>
-                    <Link href={`/product/${item.slug}`} style={{ textDecoration: "none" }}>
+                    <Link href={`/product/?slug=${item.slug}`} style={{ textDecoration: "none" }}>
                       <div style={{ aspectRatio: "3/4", background: "#f5f2ec", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "64px" }}>
                         {item.icon}
                       </div>
@@ -84,9 +84,9 @@ export default function WishlistPage() {
                       <div style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "17px", color: "#0a0a0a", marginBottom: "4px" }}>{item.name}</div>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
                         {item.originalPrice && (
-                          <span style={{ fontSize: "12px", color: "#8a8680", textDecoration: "line-through" }}>${item.originalPrice}</span>
+                          <span style={{ fontSize: "12px", color: "#8a8680", textDecoration: "line-through" }}>৳{item.originalPrice}</span>
                         )}
-                        <span style={{ fontSize: "13px", color: "#0a0a0a" }}>${item.price}</span>
+                        <span style={{ fontSize: "13px", color: "#0a0a0a" }}>৳{item.price}</span>
                       </div>
                       <button
                         onClick={() => handleAddToCart(item)}

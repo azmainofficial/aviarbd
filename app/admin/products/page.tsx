@@ -3,6 +3,9 @@ import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { apiUrl } from "@/lib/api";
+
+
 
 interface AdminProduct {
   _id?: string; id?: string; name: string; price: number; originalPrice?: number;
@@ -14,7 +17,7 @@ const SEC_LABEL: Record<string, string> = { collection: "Collection", new_arriva
 const SEC_COLOR: Record<string, { color: string; bg: string }> = {
   collection: { color: "#1e40af", bg: "#dbeafe" },
   new_arrival: { color: "#065f46", bg: "#d1fae5" },
-  sale:        { color: "#991b1b", bg: "#fee2e2" },
+  sale: { color: "#991b1b", bg: "#fee2e2" },
 };
 
 export default function AdminProductsPage() {
@@ -33,7 +36,8 @@ export default function AdminProductsPage() {
   };
 
   useEffect(() => {
-    fetch("/api/admin/products")
+    fetch(apiUrl("/admin/products"))
+
       .then(r => r.json())
       .then((d: AdminProduct[]) => setProducts(Array.isArray(d) ? d : []))
       .catch(console.error)
@@ -56,18 +60,19 @@ export default function AdminProductsPage() {
     setDeleting(id);
     setConfirmingId(null);
     try {
-      const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-      if (res.ok) { 
-        setProducts(prev => prev.filter(p => String(p.id || p._id) !== String(id))); 
-        showToast("Product deleted"); 
+      const res = await fetch(apiUrl(`/admin/products/${id}`), { method: "DELETE" });
+
+      if (res.ok) {
+        setProducts(prev => prev.filter(p => String(p.id || p._id) !== String(id)));
+        showToast("Product deleted");
       } else {
         const text = await res.text();
         showToast(`Failed (${res.status}): ${text.slice(0, 40)}`, false);
       }
     } catch (e: any) {
       showToast("Error: " + (e.message || "Network fail"), false);
-    } finally { 
-      setDeleting(null); 
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -84,7 +89,7 @@ export default function AdminProductsPage() {
           <h1 style={{ fontFamily: "Cormorant Garamond, serif", fontSize: "40px", fontWeight: 300, color: "#0a0a0a" }}>All <em>Products</em></h1>
         </div>
         <Link href="/admin/products/new" style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#c9a96e", color: "#0a0a0a", padding: "12px 24px", fontSize: "12px", letterSpacing: "0.1em", textTransform: "uppercase", textDecoration: "none" }}>
-          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           Add New Product
         </Link>
       </div>
@@ -152,7 +157,7 @@ export default function AdminProductsPage() {
                           : <span style={{ color: "#8a8680", fontSize: "12px" }}>—</span>}
                       </td>
                       <td style={{ padding: "14px 16px", fontSize: "13px", fontWeight: 500 }}>
-                        ${p.price}{p.originalPrice && <span style={{ fontSize: "11px", color: "#8a8680", textDecoration: "line-through", marginLeft: 6 }}>${p.originalPrice}</span>}
+                        ৳{p.price}{p.originalPrice && <span style={{ fontSize: "11px", color: "#8a8680", textDecoration: "line-through", marginLeft: 6 }}>৳{p.originalPrice}</span>}
                       </td>
                       <td style={{ padding: "14px 16px" }}>
                         <span style={{ fontSize: "13px", fontWeight: p.stockCount < 5 ? 700 : 400, color: p.stockCount < 5 ? "#92400e" : "#0a0a0a" }}>{p.stockCount}</span>
@@ -166,11 +171,11 @@ export default function AdminProductsPage() {
                       <td style={{ padding: "14px 16px" }}>
                         <div style={{ display: "flex", gap: 16 }}>
                           <Link href={`/admin/products/${pid}`} style={{ fontSize: "12px", color: "#0a0a0a", textDecoration: "none", borderBottom: "0.5px solid rgba(0,0,0,0.3)", paddingBottom: 1 }}>Edit</Link>
-                          <button 
+                          <button
                             onClick={() => {
                               if (confirmingId === pid) handleDelete(pid);
                               else setConfirmingId(pid);
-                            }} 
+                            }}
                             disabled={deleting === pid}
                             onMouseLeave={() => { if (confirmingId === pid) setConfirmingId(null); }}
                             style={{ fontSize: "12px", color: "#c0392b", background: "none", border: "none", borderBottom: "0.5px solid rgba(192,57,43,0.3)", paddingBottom: 1, opacity: deleting === pid ? 0.5 : 1, cursor: "pointer", transition: "all 0.2s" }}>

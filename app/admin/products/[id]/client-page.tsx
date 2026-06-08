@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useRouter, useParams } from "next/navigation";
+import { apiUrl } from "@/lib/api";
+
 import Link from "next/link";
 import Image from "next/image";
 import type { ProductSection } from "@/lib/types";
@@ -34,7 +36,8 @@ export default function EditProductPage() {
   const showToast = (message: string, ok = true) => { setToast({ show: true, message, ok }); setTimeout(() => setToast(t => ({ ...t, show: false })), 3500); };
 
   useEffect(() => {
-    fetch(`/api/admin/products/${id}`)
+    fetch(apiUrl(`/admin/products/${id}`))
+
       .then(r => r.json())
       .then((p: Record<string, unknown>) => {
         setForm({ name: String(p.name ?? ""), description: String(p.description ?? ""), price: String(p.price ?? ""), originalPrice: p.originalPrice ? String(p.originalPrice) : "", stockCount: String(p.stockCount ?? 0), inStock: Boolean(p.inStock ?? true), category: String(p.category ?? "Clothing"), sizes: Array.isArray(p.sizes) ? p.sizes as string[] : [], colors: Array.isArray(p.colors) ? p.colors as string[] : [], colorInput: "", section: (p.section as ProductSection) ?? "" });
@@ -50,7 +53,8 @@ export default function EditProductPage() {
     const fd = new FormData();
     fd.append("image", file);
 
-    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const res = await fetch(apiUrl("/upload"), { method: "POST", body: fd });
+
 
     const text = await res.text();
     let json: Record<string, unknown> = {};
@@ -95,7 +99,8 @@ export default function EditProductPage() {
     setSaving(true);
     try {
       const urls = images.filter(i => i.url).map(i => i.url);
-      const res = await fetch(`/api/admin/products/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, description: form.description, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, category: form.category, section: form.section || null, sizes: form.sizes, colors: form.colors, stockCount: Number(form.stockCount), inStock: form.inStock, images: urls, image: urls[0] ?? "" }) });
+      const res = await fetch(apiUrl(`/admin/products/${id}`), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: form.name, description: form.description, price: Number(form.price), originalPrice: form.originalPrice ? Number(form.originalPrice) : null, category: form.category, section: form.section || null, sizes: form.sizes, colors: form.colors, stockCount: Number(form.stockCount), inStock: form.inStock, images: urls, image: urls[0] ?? "" }) });
+
       if (res.ok) { showToast("Product updated!"); setTimeout(() => router.push("/admin/products"), 1200); }
       else showToast("Failed to save", false);
     } catch { showToast("An error occurred", false); }
@@ -167,10 +172,10 @@ export default function EditProductPage() {
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <input type="number" placeholder="Price ($) *" value={form.price} min="0" step="0.01" onChange={e => { setForm(p => ({ ...p, price: e.target.value })); setErrors(er => ({ ...er, price: "" })); }} style={errors.price ? { ...inp, borderColor: "#c0392b" } : inp} />
+                  <input type="number" placeholder="Price (৳) *" value={form.price} min="0" step="0.01" onChange={e => { setForm(p => ({ ...p, price: e.target.value })); setErrors(er => ({ ...er, price: "" })); }} style={errors.price ? { ...inp, borderColor: "#c0392b" } : inp} />
                   {errors.price && <p style={{ fontSize: "11px", color: "#c0392b", marginTop: 4 }}>{errors.price}</p>}
                 </div>
-                <input type="number" placeholder="Original Price ($)" value={form.originalPrice} min="0" step="0.01" onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} style={inp} />
+                <input type="number" placeholder="Original Price (৳)" value={form.originalPrice} min="0" step="0.01" onChange={e => setForm(p => ({ ...p, originalPrice: e.target.value }))} style={inp} />
               </div>
               <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} style={{ ...inp, appearance: "none" as const }}>
                 {CATS.map(c => <option key={c} value={c}>{c}</option>)}

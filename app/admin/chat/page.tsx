@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiUrl } from "@/lib/api";
+
 
 interface Conversation {
   _id: string;
@@ -63,7 +65,8 @@ export default function AdminChat() {
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    const res = await fetch("/api/admin/chat");
+    const res = await fetch(apiUrl("/admin/chat"));
+
     if (!res.ok) return;
     const data = await res.json();
     setConversations(Array.isArray(data.conversations) ? data.conversations.map(mapApiConversation) : []);
@@ -71,7 +74,8 @@ export default function AdminChat() {
   }, []);
 
   const fetchMessages = useCallback(async (convId: string) => {
-    const res = await fetch(`/api/admin/chat/${convId}`);
+    const res = await fetch(apiUrl(`/admin/chat/${convId}`));
+
     if (!res.ok) return;
     const data = await res.json();
     setMessages(Array.isArray(data.messages) ? data.messages.map(mapApiMessage) : []);
@@ -116,7 +120,8 @@ export default function AdminChat() {
       { _id: tempId, content, sender: "admin", createdAt: new Date().toISOString() },
     ]);
     try {
-      const res = await fetch(`/api/admin/chat/${selected}`, {
+      const res = await fetch(apiUrl(`/admin/chat/${selected}`), {
+
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -135,7 +140,8 @@ export default function AdminChat() {
   const toggleStatus = async () => {
     if (!selected || !selectedConv) return;
     const newStatus = selectedConv.status === "open" ? "closed" : "open";
-    await fetch(`/api/admin/chat/${selected}`, {
+    await fetch(apiUrl(`/admin/chat/${selected}`), {
+
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
